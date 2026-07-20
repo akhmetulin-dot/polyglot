@@ -315,7 +315,7 @@ export default function Words() {
 
       {/* Add / Edit word dialog */}
       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-        <DialogContent className="w-[95vw] max-w-md max-h-[90vh] overflow-y-auto p-5">
+        <DialogContent className="w-[95vw] max-w-md max-h-[85svh] overflow-y-auto overscroll-y-contain p-5 top-[5%] translate-y-0 sm:top-[50%] sm:translate-y-[-50%]">
           <DialogHeader>
             <DialogTitle>{editingWord ? "Редактировать слово" : "Новое слово"}</DialogTitle>
           </DialogHeader>
