@@ -272,6 +272,10 @@ export function Trainer({ words: initialWords, title, onFinish }: TrainerProps) 
               onChange={(e) => setPl(e.target.value)}
               onKeyDown={(e) => handleKeyDown(e, 'de')}
               disabled={showNext || isSuccessShake}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="none"
+              spellCheck={false}
               className={cn(
                 "text-lg h-14 bg-card",
                 plState === 'correct' && "border-green-500 bg-green-50/50 text-green-700 dark:bg-green-950/20 dark:text-green-400 focus-visible:ring-green-500",
@@ -289,6 +293,10 @@ export function Trainer({ words: initialWords, title, onFinish }: TrainerProps) 
               onChange={(e) => setDe(e.target.value)}
               onKeyDown={(e) => handleKeyDown(e, 'en')}
               disabled={showNext || isSuccessShake}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="none"
+              spellCheck={false}
               className={cn(
                 "text-lg h-14 bg-card",
                 deState === 'correct' && "border-green-500 bg-green-50/50 text-green-700 dark:bg-green-950/20 dark:text-green-400 focus-visible:ring-green-500",
@@ -306,6 +314,10 @@ export function Trainer({ words: initialWords, title, onFinish }: TrainerProps) 
               onChange={(e) => setEn(e.target.value)}
               onKeyDown={(e) => handleKeyDown(e, 'submit')}
               disabled={showNext || isSuccessShake}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="none"
+              spellCheck={false}
               className={cn(
                 "text-lg h-14 bg-card",
                 enState === 'correct' && "border-green-500 bg-green-50/50 text-green-700 dark:bg-green-950/20 dark:text-green-400 focus-visible:ring-green-500",
