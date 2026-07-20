@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/"
+title = "Словарь — Интервальное повторение"
+version = "1.0.0"
+id = "artifacts/vocab-app"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 20373
+
+[services.development]
+run = "pnpm --filter @workspace/vocab-app run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/vocab-app", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/vocab-app/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "20373"
+BASE_PATH = "/"
