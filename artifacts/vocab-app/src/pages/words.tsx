@@ -327,6 +327,7 @@ export default function Words() {
                 onChange={e => setFormData({ ...formData, russian: e.target.value })} 
                 placeholder="Например: дерево"
                 className="font-serif text-lg"
+                lang="ru"
                 autoComplete="off"
                 autoCorrect="off"
                 autoCapitalize="none"
@@ -340,6 +341,7 @@ export default function Words() {
                 <Input 
                   value={formData.polish} 
                   onChange={e => setFormData({ ...formData, polish: e.target.value })}
+                  lang="pl"
                   autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck={false}
                 />
               </div>
@@ -348,6 +350,7 @@ export default function Words() {
                 <Input 
                   value={formData.german} 
                   onChange={e => setFormData({ ...formData, german: e.target.value })}
+                  lang="de"
                   autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck={false}
                 />
               </div>
@@ -356,6 +359,7 @@ export default function Words() {
                 <Input 
                   value={formData.english} 
                   onChange={e => setFormData({ ...formData, english: e.target.value })}
+                  lang="en"
                   autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck={false}
                 />
               </div>
