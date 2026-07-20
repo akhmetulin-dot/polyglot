@@ -23,7 +23,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Search, Plus, Trash2, Upload, Edit2, FileSpreadsheet, CheckCircle2, ClipboardPaste, Link2, RotateCcw, History, Languages } from "lucide-react";
+import { Loader2, Search, Plus, Trash2, Upload, Edit2, FileSpreadsheet, CheckCircle2, ClipboardPaste, Link2, RotateCcw, History, Languages, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const WORD_TYPE_LABELS: Record<string, string> = {
@@ -418,8 +418,19 @@ export default function Words() {
           <h1 className="text-2xl sm:text-3xl font-bold font-serif text-foreground">Словарь</h1>
         </div>
         <div className="flex gap-2">
-          <Button variant="ghost" size="sm" onClick={() => setIsTrashOpen(true)} className="text-muted-foreground">
+          <Button variant="ghost" size="sm" onClick={() => setIsTrashOpen(true)} className="text-muted-foreground" title="Корзина">
             <Trash2 className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="sm" className="text-muted-foreground" title="Экспорт словаря с историей" onClick={async () => {
+            const resp = await fetch("/api/words/export");
+            const data = await resp.json();
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url; a.download = `vocab-export-${new Date().toISOString().slice(0,10)}.json`;
+            a.click(); URL.revokeObjectURL(url);
+          }}>
+            <Download className="h-4 w-4" />
           </Button>
           <Button variant="outline" size="sm" onClick={() => setIsBulkImportOpen(true)}>
             <Upload className="h-4 w-4 mr-1.5" /> Импорт
@@ -486,6 +497,11 @@ export default function Words() {
                     {word.frequencyRank && (
                       <Badge variant="secondary" className="text-[10px] text-muted-foreground/70 font-mono ml-1">
                         #{word.frequencyRank}
+                      </Badge>
+                    )}
+                    {word.wordType && (
+                      <Badge variant="outline" className="text-[10px] text-muted-foreground/60 ml-1">
+                        {word.wordType === "academic" ? "акад" : word.wordType === "everyday" ? "быт" : "смеш"}
                       </Badge>
                     )}
                   </div>

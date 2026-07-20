@@ -23,6 +23,11 @@ function parseSettings(row: typeof settingsTable.$inferSelect) {
     reviewIntervals: row.reviewIntervals.split(",").map(Number).filter(Boolean),
     sessionSize: row.sessionSize,
     reviewSessionSize: row.reviewSessionSize,
+    totalSessions: row.totalSessions,
+    traceNew: row.traceNew,
+    traceReview: row.traceReview,
+    traceError: row.traceError,
+    traceErrorReview: row.traceErrorReview,
   };
 }
 
@@ -52,6 +57,18 @@ router.put("/settings", async (req, res): Promise<void> => {
   }
   if (parsed.data.reviewSessionSize !== undefined) {
     updateData.reviewSessionSize = parsed.data.reviewSessionSize;
+  }
+  if (parsed.data.traceNew !== undefined) {
+    updateData.traceNew = parsed.data.traceNew;
+  }
+  if (parsed.data.traceReview !== undefined) {
+    updateData.traceReview = parsed.data.traceReview;
+  }
+  if (parsed.data.traceError !== undefined) {
+    updateData.traceError = parsed.data.traceError;
+  }
+  if (parsed.data.traceErrorReview !== undefined) {
+    updateData.traceErrorReview = parsed.data.traceErrorReview;
   }
 
   const [updated] = await db
