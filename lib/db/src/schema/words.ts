@@ -12,8 +12,16 @@ export const wordsTable = pgTable("words", {
   frequencyRank: integer("frequency_rank"),
   correctCount: integer("correct_count").notNull().default(0),
   hintCount: integer("hint_count").notNull().default(0),
+  // nextReviewAt kept as a boolean marker: null = new word, non-null = in SRS queue
   nextReviewAt: timestamp("next_review_at"),
-  reviewInterval: integer("review_interval").notNull().default(1),
+  // nextReviewSession: the global session number at which this word is due for review
+  nextReviewSession: integer("next_review_session"),
+  // reviewInterval: index into the intervals array (how many times reviewed correctly)
+  reviewInterval: integer("review_interval").notNull().default(0),
+  // Word usage context: academic | everyday | mixed | null (unknown)
+  wordType: text("word_type"),
+  // Soft delete: null = active, non-null = in trash
+  deletedAt: timestamp("deleted_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

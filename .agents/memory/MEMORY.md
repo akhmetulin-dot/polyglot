@@ -1,0 +1,1 @@
+- [Vocab app architecture](vocab-app-arch.md) — session-based SRS, word events table, soft delete; key schema decisions

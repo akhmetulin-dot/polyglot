@@ -5,6 +5,7 @@
  * Vocabulary learning app API with spaced repetition
  * OpenAPI spec version: 0.1.0
  */
+import type { WordWordType } from './wordWordType';
 
 export interface Word {
   id: number;
@@ -27,11 +28,26 @@ export interface Word {
   /** Total hints requested */
   hintCount?: number;
   /**
-     * When this word is next due for spaced repetition review
+     * Marker - null means new word, non-null means in SRS queue
      * @nullable
      */
   nextReviewAt?: Date | null;
-  /** Current review interval in days */
+  /**
+     * Global session number when this word is next due for review
+     * @nullable
+     */
+  nextReviewSession?: number | null;
+  /** Number of times reviewed correctly (index into intervals array) */
   reviewInterval?: number;
+  /**
+     * Usage context of the word
+     * @nullable
+     */
+  wordType?: WordWordType;
+  /**
+     * Soft-delete timestamp; null means active, non-null means in trash
+     * @nullable
+     */
+  deletedAt?: Date | null;
   createdAt: Date;
 }

@@ -13,6 +13,19 @@ export interface ErrorResponse {
   error: string;
 }
 
+/**
+ * Usage context of the word
+ * @nullable
+ */
+export type WordWordType = typeof WordWordType[keyof typeof WordWordType] | null;
+
+
+export const WordWordType = {
+  academic: 'academic',
+  everyday: 'everyday',
+  mixed: 'mixed',
+} as const;
+
 export interface Word {
   id: number;
   russian: string;
@@ -34,14 +47,38 @@ export interface Word {
   /** Total hints requested */
   hintCount?: number;
   /**
-     * When this word is next due for spaced repetition review
+     * Marker - null means new word, non-null means in SRS queue
      * @nullable
      */
   nextReviewAt?: string | null;
-  /** Current review interval in days */
+  /**
+     * Global session number when this word is next due for review
+     * @nullable
+     */
+  nextReviewSession?: number | null;
+  /** Number of times reviewed correctly (index into intervals array) */
   reviewInterval?: number;
+  /**
+     * Usage context of the word
+     * @nullable
+     */
+  wordType?: WordWordType;
+  /**
+     * Soft-delete timestamp; null means active, non-null means in trash
+     * @nullable
+     */
+  deletedAt?: string | null;
   createdAt: string;
 }
+
+export type WordInputWordType = typeof WordInputWordType[keyof typeof WordInputWordType];
+
+
+export const WordInputWordType = {
+  academic: 'academic',
+  everyday: 'everyday',
+  mixed: 'mixed',
+} as const;
 
 export interface WordInput {
   /** @minLength 1 */
@@ -51,7 +88,17 @@ export interface WordInput {
   english?: string;
   mnemonic?: string;
   frequencyRank?: number;
+  wordType?: WordInputWordType;
 }
+
+export type WordUpdateWordType = typeof WordUpdateWordType[keyof typeof WordUpdateWordType];
+
+
+export const WordUpdateWordType = {
+  academic: 'academic',
+  everyday: 'everyday',
+  mixed: 'mixed',
+} as const;
 
 export interface WordUpdate {
   /** @minLength 1 */
@@ -61,6 +108,7 @@ export interface WordUpdate {
   english?: string;
   mnemonic?: string;
   frequencyRank?: number;
+  wordType?: WordUpdateWordType;
 }
 
 export interface WordListResponse {
@@ -132,16 +180,31 @@ export interface ReviewSession {
   total: number;
 }
 
+export interface SessionComplete {
+  /** New global session count after increment */
+  totalSessions: number;
+}
+
 export interface Settings {
   id: number;
   /** Repeat wrong word after N words in session */
   errorRepeatAfter: number;
-  /** Spaced repetition intervals in days [1, 3, 7, 14, 30, 90] */
+  /** Spaced repetition intervals in sessions [3, 5, 9, 13] */
   reviewIntervals: number[];
   /** Default training session word count */
   sessionSize: number;
   /** Default review session word count */
   reviewSessionSize: number;
+  /** Total completed sessions (global counter for session-based SRS) */
+  totalSessions: number;
+  /** Number of trace repetitions for new words */
+  traceNew: number;
+  /** Number of trace repetitions for review words */
+  traceReview: number;
+  /** Number of trace repetitions for error words */
+  traceError: number;
+  /** Number of trace repetitions for error-review words */
+  traceErrorReview: number;
 }
 
 export interface SettingsInput {
@@ -161,6 +224,44 @@ export interface SettingsInput {
      * @maximum 100
      */
   reviewSessionSize?: number;
+  /**
+     * @minimum 1
+     * @maximum 20
+     */
+  traceNew?: number;
+  /**
+     * @minimum 1
+     * @maximum 20
+     */
+  traceReview?: number;
+  /**
+     * @minimum 1
+     * @maximum 20
+     */
+  traceError?: number;
+  /**
+     * @minimum 1
+     * @maximum 20
+     */
+  traceErrorReview?: number;
+}
+
+export interface WordHistoryEvent {
+  id: number;
+  /** correct | wrong | hint | review_correct | review_wrong */
+  eventType: string;
+  sessionNumber: number;
+  createdAt: string;
+}
+
+export interface WordHistoryResponse {
+  wordId: number;
+  events: WordHistoryEvent[];
+}
+
+export interface WordExport {
+  exportedAt: string;
+  words: Word[];
 }
 
 export interface Stats {

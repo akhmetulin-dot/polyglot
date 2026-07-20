@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Loader2, Save, RefreshCcw, BookA } from "lucide-react";
+import { Loader2, Save, RefreshCcw, BookA, PenLine } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Settings() {
@@ -24,6 +24,10 @@ export default function Settings() {
     sessionSize: number;
     reviewSessionSize: number;
     reviewIntervals: string;
+    traceNew: number;
+    traceReview: number;
+    traceError: number;
+    traceErrorReview: number;
   } | null>(null);
 
   // Initialize local settings once
@@ -33,6 +37,10 @@ export default function Settings() {
       sessionSize: settings.sessionSize,
       reviewSessionSize: settings.reviewSessionSize,
       reviewIntervals: settings.reviewIntervals.join(", "),
+      traceNew: settings.traceNew,
+      traceReview: settings.traceReview,
+      traceError: settings.traceError,
+      traceErrorReview: settings.traceErrorReview,
     });
   }
 
@@ -61,6 +69,10 @@ export default function Settings() {
         sessionSize: localSettings.sessionSize,
         reviewSessionSize: localSettings.reviewSessionSize,
         reviewIntervals: intervals,
+        traceNew: localSettings.traceNew,
+        traceReview: localSettings.traceReview,
+        traceError: localSettings.traceError,
+        traceErrorReview: localSettings.traceErrorReview,
       }
     }, {
       onSuccess: (data) => {
@@ -113,13 +125,13 @@ export default function Settings() {
           </div>
 
           <div className="space-y-3">
-            <Label className="text-base">Интервалы повторения (в днях)</Label>
+            <Label className="text-base">Интервалы повторения (в сессиях)</Label>
             <Input 
               value={localSettings.reviewIntervals}
               onChange={(e) => setLocalSettings({ ...localSettings, reviewIntervals: e.target.value })}
               className="font-mono text-sm bg-muted/50"
             />
-            <p className="text-xs text-muted-foreground">Разделяйте дни запятыми. Пример: 1, 3, 7, 14, 30, 90</p>
+            <p className="text-xs text-muted-foreground">Через сколько сессий слово появится на повторении. Пример: 3, 5, 9, 13</p>
           </div>
         </CardContent>
       </Card>
@@ -158,6 +170,40 @@ export default function Settings() {
               onValueChange={([val]) => setLocalSettings({ ...localSettings, reviewSessionSize: val })} 
             />
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <PenLine className="h-5 w-5 text-primary" />
+            Прописи — повторений за слово
+          </CardTitle>
+          <CardDescription>
+            Сколько раз вводить каждое слово в режиме «Прописи» в зависимости от категории.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {(
+            [
+              { key: "traceNew" as const, label: "Новые слова" },
+              { key: "traceReview" as const, label: "Повторения" },
+              { key: "traceError" as const, label: "Ошибки" },
+              { key: "traceErrorReview" as const, label: "Ошибки-повторения" },
+            ] as const
+          ).map(({ key, label }) => (
+            <div key={key} className="space-y-3">
+              <div className="flex justify-between items-center">
+                <Label className="text-base">{label}</Label>
+                <span className="font-bold text-lg text-primary">{localSettings[key]}</span>
+              </div>
+              <Slider
+                min={1} max={20} step={1}
+                value={[localSettings[key]]}
+                onValueChange={([val]) => setLocalSettings({ ...localSettings, [key]: val })}
+              />
+            </div>
+          ))}
         </CardContent>
       </Card>
 

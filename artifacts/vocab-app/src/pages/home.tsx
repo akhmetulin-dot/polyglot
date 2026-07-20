@@ -2,7 +2,7 @@ import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Brain, Play, CheckCircle2, Trophy, Clock, Target, BookOpen } from "lucide-react";
+import { Brain, Play, CheckCircle2, Trophy, Clock, Target, BookOpen, PenLine } from "lucide-react";
 import { useGetStats, getGetStatsQueryKey } from "@workspace/api-client-react";
 
 export default function Home() {
@@ -63,6 +63,21 @@ export default function Home() {
               <Button variant="outline" size="lg" className="w-full" disabled={stats.dueForReview === 0} data-testid="button-start-review">
                 {stats.dueForReview > 0 ? "Повторить" : "Всё повторено!"}
               </Button>
+            </Link>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border shadow-sm sm:col-span-2">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-muted-foreground text-sm font-medium flex items-center gap-2">
+              <PenLine className="h-4 w-4" />
+              Прописи
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-center justify-between gap-4">
+            <p className="text-sm text-muted-foreground">Обводите слова по образцу — закрепляйте написание мышечной памятью</p>
+            <Link href="/trace">
+              <Button variant="outline">Начать</Button>
             </Link>
           </CardContent>
         </Card>

@@ -5,6 +5,7 @@
  * Vocabulary learning app API with spaced repetition
  * OpenAPI spec version: 0.1.0
  */
+import type { WordUpdateWordType } from './wordUpdateWordType';
 
 export interface WordUpdate {
   /** @minLength 1 */
@@ -14,4 +15,5 @@ export interface WordUpdate {
   english?: string;
   mnemonic?: string;
   frequencyRank?: number;
+  wordType?: WordUpdateWordType;
 }

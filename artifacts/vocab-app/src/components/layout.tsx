@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { BookOpen, Settings, List, Home, Menu, X } from "lucide-react";
+import { BookOpen, Settings, List, Home, Menu, X, PenLine } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 
 const navItems = [
   { href: "/", label: "Главная", icon: Home },
   { href: "/words", label: "Словарь", icon: List },
+  { href: "/trace", label: "Прописи", icon: PenLine },
   { href: "/settings", label: "Настройки", icon: Settings },
 ];
 

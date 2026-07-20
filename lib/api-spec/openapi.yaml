@@ -167,6 +167,72 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /words/trash:
+    get:
+      operationId: listTrashedWords
+      tags: [words]
+      summary: List soft-deleted words
+      responses:
+        "200":
+          description: Trashed words
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WordListResponse"
+
+  /words/export:
+    get:
+      operationId: exportWords
+      tags: [words]
+      summary: Export all active words with their history
+      responses:
+        "200":
+          description: Full word export
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WordExport"
+
+  /words/{id}/restore:
+    post:
+      operationId: restoreWord
+      tags: [words]
+      summary: Restore a soft-deleted word from trash
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Restored word
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Word"
+        "404":
+          description: Not found
+
+  /words/{id}/history:
+    get:
+      operationId: getWordHistory
+      tags: [words]
+      summary: Get training/review event history for a word
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Word event history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WordHistoryResponse"
+
   /words/bulk-import:
     post:
       operationId: bulkImportWords
@@ -230,6 +296,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AnswerResult"
+
+  /training/complete:
+    post:
+      operationId: completeSession
+      tags: [training]
+      summary: Mark current training or review session as complete
+      description: Increments the global session counter used by session-based spaced repetition.
+      responses:
+        "200":
+          description: Updated session counter
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionComplete"
 
   /training/hint:
     post:
@@ -358,10 +438,21 @@ components:
         nextReviewAt:
           type: ["string", "null"]
           format: date-time
-          description: When this word is next due for spaced repetition review
+          description: Marker - null means new word, non-null means in SRS queue
+        nextReviewSession:
+          type: ["integer", "null"]
+          description: Global session number when this word is next due for review
         reviewInterval:
           type: integer
-          description: Current review interval in days
+          description: Number of times reviewed correctly (index into intervals array)
+        wordType:
+          type: ["string", "null"]
+          enum: [academic, everyday, mixed, null]
+          description: Usage context of the word
+        deletedAt:
+          type: ["string", "null"]
+          format: date-time
+          description: Soft-delete timestamp; null means active, non-null means in trash
         createdAt:
           type: string
           format: date-time
@@ -383,6 +474,9 @@ components:
           type: string
         frequencyRank:
           type: integer
+        wordType:
+          type: string
+          enum: [academic, everyday, mixed]
 
     WordUpdate:
       type: object
@@ -400,6 +494,9 @@ components:
           type: string
         frequencyRank:
           type: integer
+        wordType:
+          type: string
+          enum: [academic, everyday, mixed]
 
     WordListResponse:
       type: object
@@ -527,9 +624,17 @@ components:
         total:
           type: integer
 
+    SessionComplete:
+      type: object
+      required: [totalSessions]
+      properties:
+        totalSessions:
+          type: integer
+          description: New global session count after increment
+
     Settings:
       type: object
-      required: [id, errorRepeatAfter, reviewIntervals, sessionSize, reviewSessionSize]
+      required: [id, errorRepeatAfter, reviewIntervals, sessionSize, reviewSessionSize, totalSessions, traceNew, traceReview, traceError, traceErrorReview]
       properties:
         id:
           type: integer
@@ -540,13 +645,28 @@ components:
           type: array
           items:
             type: integer
-          description: Spaced repetition intervals in days [1, 3, 7, 14, 30, 90]
+          description: Spaced repetition intervals in sessions [3, 5, 9, 13]
         sessionSize:
           type: integer
           description: Default training session word count
         reviewSessionSize:
           type: integer
           description: Default review session word count
+        totalSessions:
+          type: integer
+          description: Total completed sessions (global counter for session-based SRS)
+        traceNew:
+          type: integer
+          description: Number of trace repetitions for new words
+        traceReview:
+          type: integer
+          description: Number of trace repetitions for review words
+        traceError:
+          type: integer
+          description: Number of trace repetitions for error words
+        traceErrorReview:
+          type: integer
+          description: Number of trace repetitions for error-review words
 
     SettingsInput:
       type: object
@@ -567,6 +687,60 @@ components:
           type: integer
           minimum: 5
           maximum: 100
+        traceNew:
+          type: integer
+          minimum: 1
+          maximum: 20
+        traceReview:
+          type: integer
+          minimum: 1
+          maximum: 20
+        traceError:
+          type: integer
+          minimum: 1
+          maximum: 20
+        traceErrorReview:
+          type: integer
+          minimum: 1
+          maximum: 20
+
+    WordHistoryEvent:
+      type: object
+      required: [id, eventType, sessionNumber, createdAt]
+      properties:
+        id:
+          type: integer
+        eventType:
+          type: string
+          description: "correct | wrong | hint | review_correct | review_wrong"
+        sessionNumber:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    WordHistoryResponse:
+      type: object
+      required: [wordId, events]
+      properties:
+        wordId:
+          type: integer
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/WordHistoryEvent"
+
+    WordExport:
+      type: object
+      required: [exportedAt, words]
+      properties:
+        exportedAt:
+          type: string
+          format: date-time
+        words:
+          type: array
+          items:
+            $ref: "#/components/schemas/Word"
 
     Stats:
       type: object

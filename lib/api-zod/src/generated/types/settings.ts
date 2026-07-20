@@ -10,10 +10,20 @@ export interface Settings {
   id: number;
   /** Repeat wrong word after N words in session */
   errorRepeatAfter: number;
-  /** Spaced repetition intervals in days [1, 3, 7, 14, 30, 90] */
+  /** Spaced repetition intervals in sessions [3, 5, 9, 13] */
   reviewIntervals: number[];
   /** Default training session word count */
   sessionSize: number;
   /** Default review session word count */
   reviewSessionSize: number;
+  /** Total completed sessions (global counter for session-based SRS) */
+  totalSessions: number;
+  /** Number of trace repetitions for new words */
+  traceNew: number;
+  /** Number of trace repetitions for review words */
+  traceReview: number;
+  /** Number of trace repetitions for error words */
+  traceError: number;
+  /** Number of trace repetitions for error-review words */
+  traceErrorReview: number;
 }

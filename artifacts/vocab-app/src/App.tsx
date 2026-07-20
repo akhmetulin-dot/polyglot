@@ -8,6 +8,7 @@ import { Layout } from './components/layout';
 import Home from './pages/home';
 import Train from './pages/train';
 import Review from './pages/review';
+import Trace from './pages/trace';
 import Words from './pages/words';
 import Settings from './pages/settings';
 
@@ -29,6 +30,7 @@ function Router() {
         <Route path="/" component={Home} />
         <Route path="/train" component={Train} />
         <Route path="/review" component={Review} />
+        <Route path="/trace" component={Trace} />
         <Route path="/words" component={Words} />
         <Route path="/settings" component={Settings} />
         <Route component={NotFound} />

@@ -32,11 +32,14 @@ import type {
   HintResult,
   ListWordsParams,
   ReviewSession,
+  SessionComplete,
   Settings,
   SettingsInput,
   Stats,
   TrainingSession,
   Word,
+  WordExport,
+  WordHistoryResponse,
   WordInput,
   WordListResponse,
   WordUpdate
@@ -522,6 +525,308 @@ export const useDeleteWord = <TError = ErrorType<ErrorResponse>,
       return useMutation(getDeleteWordMutationOptions(options));
     }
 
+export const getListTrashedWordsUrl = () => {
+
+
+
+
+  return `/api/words/trash`
+}
+
+/**
+ * @summary List soft-deleted words
+ */
+export const listTrashedWords = async ( options?: RequestInit): Promise<WordListResponse> => {
+
+  return customFetch<WordListResponse>(getListTrashedWordsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListTrashedWordsQueryKey = () => {
+    return [
+    `/api/words/trash`
+    ] as const;
+    }
+
+
+export const getListTrashedWordsQueryOptions = <TData = Awaited<ReturnType<typeof listTrashedWords>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listTrashedWords>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListTrashedWordsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listTrashedWords>>> = ({ signal }) => listTrashedWords({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listTrashedWords>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListTrashedWordsQueryResult = NonNullable<Awaited<ReturnType<typeof listTrashedWords>>>
+export type ListTrashedWordsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List soft-deleted words
+ */
+
+export function useListTrashedWords<TData = Awaited<ReturnType<typeof listTrashedWords>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listTrashedWords>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListTrashedWordsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getExportWordsUrl = () => {
+
+
+
+
+  return `/api/words/export`
+}
+
+/**
+ * @summary Export all active words with their history
+ */
+export const exportWords = async ( options?: RequestInit): Promise<WordExport> => {
+
+  return customFetch<WordExport>(getExportWordsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getExportWordsQueryKey = () => {
+    return [
+    `/api/words/export`
+    ] as const;
+    }
+
+
+export const getExportWordsQueryOptions = <TData = Awaited<ReturnType<typeof exportWords>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportWords>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getExportWordsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof exportWords>>> = ({ signal }) => exportWords({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof exportWords>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ExportWordsQueryResult = NonNullable<Awaited<ReturnType<typeof exportWords>>>
+export type ExportWordsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Export all active words with their history
+ */
+
+export function useExportWords<TData = Awaited<ReturnType<typeof exportWords>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportWords>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getExportWordsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getRestoreWordUrl = (id: number,) => {
+
+
+
+
+  return `/api/words/${id}/restore`
+}
+
+/**
+ * @summary Restore a soft-deleted word from trash
+ */
+export const restoreWord = async (id: number, options?: RequestInit): Promise<Word> => {
+
+  return customFetch<Word>(getRestoreWordUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRestoreWordMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreWord>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof restoreWord>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['restoreWord'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof restoreWord>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  restoreWord(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RestoreWordMutationResult = NonNullable<Awaited<ReturnType<typeof restoreWord>>>
+
+    export type RestoreWordMutationError = ErrorType<void>
+
+    /**
+ * @summary Restore a soft-deleted word from trash
+ */
+export const useRestoreWord = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreWord>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof restoreWord>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getRestoreWordMutationOptions(options));
+    }
+
+export const getGetWordHistoryUrl = (id: number,) => {
+
+
+
+
+  return `/api/words/${id}/history`
+}
+
+/**
+ * @summary Get training/review event history for a word
+ */
+export const getWordHistory = async (id: number, options?: RequestInit): Promise<WordHistoryResponse> => {
+
+  return customFetch<WordHistoryResponse>(getGetWordHistoryUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetWordHistoryQueryKey = (id: number,) => {
+    return [
+    `/api/words/${id}/history`
+    ] as const;
+    }
+
+
+export const getGetWordHistoryQueryOptions = <TData = Awaited<ReturnType<typeof getWordHistory>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWordHistory>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetWordHistoryQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getWordHistory>>> = ({ signal }) => getWordHistory(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getWordHistory>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetWordHistoryQueryResult = NonNullable<Awaited<ReturnType<typeof getWordHistory>>>
+export type GetWordHistoryQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get training/review event history for a word
+ */
+
+export function useGetWordHistory<TData = Awaited<ReturnType<typeof getWordHistory>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWordHistory>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetWordHistoryQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getBulkImportWordsUrl = () => {
 
 
@@ -747,6 +1052,78 @@ export const useSubmitAnswer = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getSubmitAnswerMutationOptions(options));
+    }
+
+export const getCompleteSessionUrl = () => {
+
+
+
+
+  return `/api/training/complete`
+}
+
+/**
+ * Increments the global session counter used by session-based spaced repetition.
+ * @summary Mark current training or review session as complete
+ */
+export const completeSession = async ( options?: RequestInit): Promise<SessionComplete> => {
+
+  return customFetch<SessionComplete>(getCompleteSessionUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getCompleteSessionMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof completeSession>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof completeSession>>, TError,void, TContext> => {
+
+const mutationKey = ['completeSession'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof completeSession>>, void> = () => {
+
+
+          return  completeSession(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CompleteSessionMutationResult = NonNullable<Awaited<ReturnType<typeof completeSession>>>
+
+    export type CompleteSessionMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Mark current training or review session as complete
+ */
+export const useCompleteSession = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof completeSession>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof completeSession>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getCompleteSessionMutationOptions(options));
     }
 
 export const getRequestHintUrl = () => {

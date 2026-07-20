@@ -11,6 +11,7 @@ import {
   useSubmitAnswer, 
   useRequestHint, 
   useUpdateWord,
+  useCompleteSession,
   TrainingWord,
   useGetSettings,
 } from "@workspace/api-client-react";
@@ -54,6 +55,18 @@ export function Trainer({ words: initialWords, title, onFinish }: TrainerProps) 
   const [showNext, setShowNext] = useState(false);
   const [isSuccessShake, setIsSuccessShake] = useState(false);
 
+  // Reinforcement tracing state (pункт 6: after correct, user traces all words)
+  const [tracingWord, setTracingWord] = useState<{
+    russian: string;
+    polish: string | null;
+    german: string | null;
+    english: string | null;
+  } | null>(null);
+  const [tracingPl, setTracingPl] = useState("");
+  const [tracingDe, setTracingDe] = useState("");
+  const [tracingEn, setTracingEn] = useState("");
+  const [tracingFlash, setTracingFlash] = useState(false);
+
   // Inline mnemonic editing
   const [isEditingMnemonic, setIsEditingMnemonic] = useState(false);
   const [mnemonicDraft, setMnemonicDraft] = useState("");
@@ -65,6 +78,7 @@ export function Trainer({ words: initialWords, title, onFinish }: TrainerProps) 
   const submitAnswer = useSubmitAnswer();
   const requestHint = useRequestHint();
   const updateWord = useUpdateWord();
+  const completeSession = useCompleteSession();
 
   const inputRefs = {
     pl: useRef<HTMLInputElement>(null),
@@ -156,9 +170,20 @@ export function Trainer({ words: initialWords, title, onFinish }: TrainerProps) 
         if (result.allCorrect) {
           setIsSuccessShake(true);
           setCompletedCount(prev => prev + 1);
+          // Brief success shake, then show reinforcement tracing
           setTimeout(() => {
-            advanceNext();
-          }, 1000);
+            setIsSuccessShake(false);
+            setTracingWord({
+              russian: currentWord.russian,
+              polish: result.word?.polish ?? null,
+              german: result.word?.german ?? null,
+              english: result.word?.english ?? null,
+            });
+            setTracingPl("");
+            setTracingDe("");
+            setTracingEn("");
+            setTracingFlash(false);
+          }, 700);
         } else {
           setShowNext(true);
           // Re-queue logic
@@ -173,12 +198,26 @@ export function Trainer({ words: initialWords, title, onFinish }: TrainerProps) 
   };
 
   const advanceNext = () => {
+    setTracingWord(null);
     if (currentIndex + 1 >= queue.length) {
+      // Session done — increment global session counter for SRS
+      completeSession.mutate();
       setSessionFinished(true);
       if (onFinish) onFinish();
     } else {
       setCurrentIndex(prev => prev + 1);
       resetWordState();
+    }
+  };
+
+  // Check if tracing is complete — all typed values match the expected words
+  const checkTracing = (pl: string, de: string, en: string) => {
+    if (!tracingWord) return;
+    const matches = (typed: string, expected: string | null) =>
+      !expected || typed.trim().toLowerCase() === expected.trim().toLowerCase();
+    if (matches(pl, tracingWord.polish) && matches(de, tracingWord.german) && matches(en, tracingWord.english)) {
+      setTracingFlash(true);
+      setTimeout(advanceNext, 900);
     }
   };
 
@@ -235,6 +274,100 @@ export function Trainer({ words: initialWords, title, onFinish }: TrainerProps) 
         <Link href="/">
           <Button size="lg" className="mt-4">На главную</Button>
         </Link>
+      </div>
+    );
+  }
+
+  // ── Reinforcement tracing screen ────────────────────────────────────────────
+  if (tracingWord) {
+    const hasPlOk = !tracingWord.polish || tracingPl.trim().toLowerCase() === tracingWord.polish.trim().toLowerCase();
+    const hasDeOk = !tracingWord.german || tracingDe.trim().toLowerCase() === tracingWord.german.trim().toLowerCase();
+    const hasEnOk = !tracingWord.english || tracingEn.trim().toLowerCase() === tracingWord.english.trim().toLowerCase();
+    const allDone = hasPlOk && hasDeOk && hasEnOk;
+
+    return (
+      <div className={cn(
+        "max-w-xl mx-auto flex flex-col gap-6 animate-in fade-in duration-300",
+        tracingFlash ? "success-pulse" : ""
+      )}>
+        <p className="text-xs uppercase tracking-widest text-muted-foreground font-semibold text-center">Закрепление — обведи слова</p>
+
+        {/* One-line visual reference: russian — PL — DE — EN */}
+        <div className="text-center text-sm font-mono text-muted-foreground/50 leading-relaxed">
+          <span className="text-foreground font-bold text-lg">{tracingWord.russian}</span>
+          {tracingWord.polish && <span> — {tracingWord.polish}</span>}
+          {tracingWord.german && <span> — {tracingWord.german}</span>}
+          {tracingWord.english && <span> — {tracingWord.english}</span>}
+        </div>
+
+        {/* Tracing inputs with ghost text (placeholder = correct answer) */}
+        <div className="space-y-3">
+          {tracingWord.polish && (
+            <div className="grid gap-1.5">
+              <label className="text-xs uppercase text-muted-foreground font-bold tracking-wider ml-1">🇵🇱 PL</label>
+              <Input
+                value={tracingPl}
+                onChange={e => {
+                  const v = e.target.value;
+                  setTracingPl(v);
+                  checkTracing(v, tracingDe, tracingEn);
+                }}
+                placeholder={tracingWord.polish}
+                autoFocus
+                autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck={false}
+                lang="pl"
+                className={cn(
+                  "text-lg h-14 bg-card transition-colors",
+                  hasPlOk && tracingPl ? "border-green-500 bg-green-50/40 text-green-700 dark:bg-green-950/20 dark:text-green-400" : ""
+                )}
+              />
+            </div>
+          )}
+          {tracingWord.german && (
+            <div className="grid gap-1.5">
+              <label className="text-xs uppercase text-muted-foreground font-bold tracking-wider ml-1">🇩🇪 DE</label>
+              <Input
+                value={tracingDe}
+                onChange={e => {
+                  const v = e.target.value;
+                  setTracingDe(v);
+                  checkTracing(tracingPl, v, tracingEn);
+                }}
+                placeholder={tracingWord.german}
+                autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck={false}
+                lang="de"
+                className={cn(
+                  "text-lg h-14 bg-card transition-colors",
+                  hasDeOk && tracingDe ? "border-green-500 bg-green-50/40 text-green-700 dark:bg-green-950/20 dark:text-green-400" : ""
+                )}
+              />
+            </div>
+          )}
+          {tracingWord.english && (
+            <div className="grid gap-1.5">
+              <label className="text-xs uppercase text-muted-foreground font-bold tracking-wider ml-1">🇬🇧 EN</label>
+              <Input
+                value={tracingEn}
+                onChange={e => {
+                  const v = e.target.value;
+                  setTracingEn(v);
+                  checkTracing(tracingPl, tracingDe, v);
+                }}
+                placeholder={tracingWord.english}
+                autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck={false}
+                lang="en"
+                className={cn(
+                  "text-lg h-14 bg-card transition-colors",
+                  hasEnOk && tracingEn ? "border-green-500 bg-green-50/40 text-green-700 dark:bg-green-950/20 dark:text-green-400" : ""
+                )}
+              />
+            </div>
+          )}
+        </div>
+
+        <Button variant="ghost" size="sm" className="text-muted-foreground self-center" onClick={advanceNext}>
+          Пропустить →
+        </Button>
       </div>
     );
   }
