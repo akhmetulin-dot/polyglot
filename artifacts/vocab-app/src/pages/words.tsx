@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Search, Plus, Trash2, Upload, Edit2, FileSpreadsheet, CheckCircle2 } from "lucide-react";
@@ -229,7 +230,6 @@ export default function Words() {
       <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold font-serif text-foreground">Словарь</h1>
-          <p className="text-muted-foreground text-sm">Ваша личная база знаний.</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => setIsBulkImportOpen(true)}>
@@ -283,30 +283,29 @@ export default function Words() {
               className="cursor-pointer hover:border-primary/50 transition-colors bg-card/60 backdrop-blur-sm"
               onClick={() => handleOpenEdit(word)}
             >
-              <CardContent className="p-4 flex items-center justify-between gap-3">
-                <div className="space-y-1 overflow-hidden min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-bold text-lg font-serif">{word.russian}</span>
+              <CardContent className="p-3 flex items-start justify-between gap-3">
+                <div className="overflow-hidden min-w-0 space-y-1">
+                  {/* Single line: Russian — PL — DE — EN */}
+                  <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                    <span className="font-bold text-base font-serif">{word.russian}</span>
+                    <span className="text-muted-foreground/30 select-none">—</span>
+                    <span className="text-sm text-muted-foreground">{word.polish || '—'}</span>
+                    <span className="text-muted-foreground/30 select-none">—</span>
+                    <span className="text-sm text-muted-foreground">{word.german || '—'}</span>
+                    <span className="text-muted-foreground/30 select-none">—</span>
+                    <span className="text-sm text-muted-foreground">{word.english || '—'}</span>
                     {word.frequencyRank && (
-                      <Badge variant="secondary" className="text-[10px] uppercase text-muted-foreground/80 font-mono">
+                      <Badge variant="secondary" className="text-[10px] text-muted-foreground/70 font-mono ml-1">
                         #{word.frequencyRank}
                       </Badge>
                     )}
                   </div>
-                  <div className="text-sm text-muted-foreground flex flex-wrap gap-x-3 gap-y-1">
-                    {word.polish && <span><span className="text-[10px] uppercase font-bold mr-1">PL</span>{word.polish}</span>}
-                    {word.german && <span><span className="text-[10px] uppercase font-bold mr-1">DE</span>{word.german}</span>}
-                    {word.english && <span><span className="text-[10px] uppercase font-bold mr-1">EN</span>{word.english}</span>}
-                  </div>
+                  {/* Mnemonic below */}
+                  {word.mnemonic && (
+                    <p className="text-xs text-primary/60 italic truncate">{word.mnemonic}</p>
+                  )}
                 </div>
-                <div className="text-right shrink-0">
-                  <div className="text-xs text-muted-foreground">
-                    <span className="text-green-600 dark:text-green-500 font-bold">{word.correctCount}</span>
-                    <span className="opacity-50 mx-1">/</span>
-                    <span className="text-amber-600 dark:text-amber-500 font-bold">{word.hintCount}</span>
-                  </div>
-                  <Edit2 className="h-4 w-4 text-muted-foreground/30 mt-2 ml-auto" />
-                </div>
+                <Edit2 className="h-4 w-4 text-muted-foreground/30 shrink-0 mt-1" />
               </CardContent>
             </Card>
           ))}

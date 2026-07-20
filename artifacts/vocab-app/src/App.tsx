@@ -11,7 +11,16 @@ import Review from './pages/review';
 import Words from './pages/words';
 import Settings from './pages/settings';
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Don't refetch when the user switches tabs/apps and returns.
+      // This prevents wiping unsaved form state when copying from another app.
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+    },
+  },
+});
 
 function Router() {
   return (

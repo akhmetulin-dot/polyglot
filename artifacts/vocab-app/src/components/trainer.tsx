@@ -318,34 +318,21 @@ export function Trainer({ words: initialWords, title, onFinish }: TrainerProps) 
               )}
             </div>
 
-            <div className="grid grid-cols-3 gap-2 text-sm pt-1 border-t border-primary/10">
-              <div>
-                <span className="text-muted-foreground text-xs uppercase block mb-1">🇵🇱 PL</span>
-                <span className="font-semibold">{hintData.polish || '—'}</span>
-              </div>
-              <div>
-                <span className="text-muted-foreground text-xs uppercase block mb-1">🇩🇪 DE</span>
-                <span className="font-semibold">{hintData.german || '—'}</span>
-              </div>
-              <div>
-                <span className="text-muted-foreground text-xs uppercase block mb-1">🇬🇧 EN</span>
-                <span className="font-semibold">{hintData.english || '—'}</span>
-              </div>
-            </div>
           </div>
         )}
 
         <div className={cn("space-y-4 mb-8", isSuccessShake ? "success-pulse" : "")}>
 
           {/* PL field */}
-          <div className="relative">
-            {hintData && focusedField === 'pl' && (
-              <div className="absolute bottom-[calc(100%+6px)] left-0 right-0 z-20 bg-primary text-primary-foreground rounded-lg px-3 py-2 shadow-lg animate-in fade-in duration-150">
-                <p className="text-sm font-bold">🇵🇱 {hintData.polish || '—'}</p>
-                {hintData.mnemonic && <p className="text-xs opacity-80 mt-0.5 whitespace-normal">{hintData.mnemonic}</p>}
-              </div>
-            )}
-            <Label htmlFor="pl" className="text-xs uppercase text-muted-foreground ml-1 font-bold tracking-wider">🇵🇱 Polski (PL)</Label>
+          <div className="grid gap-2">
+            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 ml-1">
+              <Label htmlFor="pl" className="text-xs uppercase text-muted-foreground font-bold tracking-wider">🇵🇱 PL</Label>
+              {hintData && focusedField === 'pl' && hintData.mnemonic && (
+                <span className="text-xs text-primary/70 animate-in fade-in duration-150 normal-case tracking-normal italic">
+                  {hintData.mnemonic}
+                </span>
+              )}
+            </div>
             <Input
               id="pl"
               ref={inputRefs.pl}
@@ -361,7 +348,7 @@ export function Trainer({ words: initialWords, title, onFinish }: TrainerProps) 
               autoCapitalize="none"
               spellCheck={false}
               className={cn(
-                "text-lg h-14 bg-card mt-2",
+                "text-lg h-14 bg-card",
                 plState === 'correct' && "border-green-500 bg-green-50/50 text-green-700 dark:bg-green-950/20 dark:text-green-400 focus-visible:ring-green-500",
                 plState === 'wrong' && "border-red-500 bg-red-50/50 text-red-700 dark:bg-red-950/20 dark:text-red-400 shake focus-visible:ring-red-500"
               )}
@@ -369,14 +356,15 @@ export function Trainer({ words: initialWords, title, onFinish }: TrainerProps) 
           </div>
 
           {/* DE field */}
-          <div className="relative">
-            {hintData && focusedField === 'de' && (
-              <div className="absolute bottom-[calc(100%+6px)] left-0 right-0 z-20 bg-primary text-primary-foreground rounded-lg px-3 py-2 shadow-lg animate-in fade-in duration-150">
-                <p className="text-sm font-bold">🇩🇪 {hintData.german || '—'}</p>
-                {hintData.mnemonic && <p className="text-xs opacity-80 mt-0.5 whitespace-normal">{hintData.mnemonic}</p>}
-              </div>
-            )}
-            <Label htmlFor="de" className="text-xs uppercase text-muted-foreground ml-1 font-bold tracking-wider">🇩🇪 Deutsch (DE)</Label>
+          <div className="grid gap-2">
+            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 ml-1">
+              <Label htmlFor="de" className="text-xs uppercase text-muted-foreground font-bold tracking-wider">🇩🇪 DE</Label>
+              {hintData && focusedField === 'de' && hintData.mnemonic && (
+                <span className="text-xs text-primary/70 animate-in fade-in duration-150 normal-case tracking-normal italic">
+                  {hintData.mnemonic}
+                </span>
+              )}
+            </div>
             <Input
               id="de"
               ref={inputRefs.de}
@@ -392,7 +380,7 @@ export function Trainer({ words: initialWords, title, onFinish }: TrainerProps) 
               autoCapitalize="none"
               spellCheck={false}
               className={cn(
-                "text-lg h-14 bg-card mt-2",
+                "text-lg h-14 bg-card",
                 deState === 'correct' && "border-green-500 bg-green-50/50 text-green-700 dark:bg-green-950/20 dark:text-green-400 focus-visible:ring-green-500",
                 deState === 'wrong' && "border-red-500 bg-red-50/50 text-red-700 dark:bg-red-950/20 dark:text-red-400 shake focus-visible:ring-red-500"
               )}
@@ -400,14 +388,15 @@ export function Trainer({ words: initialWords, title, onFinish }: TrainerProps) 
           </div>
 
           {/* EN field */}
-          <div className="relative">
-            {hintData && focusedField === 'en' && (
-              <div className="absolute bottom-[calc(100%+6px)] left-0 right-0 z-20 bg-primary text-primary-foreground rounded-lg px-3 py-2 shadow-lg animate-in fade-in duration-150">
-                <p className="text-sm font-bold">🇬🇧 {hintData.english || '—'}</p>
-                {hintData.mnemonic && <p className="text-xs opacity-80 mt-0.5 whitespace-normal">{hintData.mnemonic}</p>}
-              </div>
-            )}
-            <Label htmlFor="en" className="text-xs uppercase text-muted-foreground ml-1 font-bold tracking-wider">🇬🇧 English (EN)</Label>
+          <div className="grid gap-2">
+            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 ml-1">
+              <Label htmlFor="en" className="text-xs uppercase text-muted-foreground font-bold tracking-wider">🇬🇧 EN</Label>
+              {hintData && focusedField === 'en' && hintData.mnemonic && (
+                <span className="text-xs text-primary/70 animate-in fade-in duration-150 normal-case tracking-normal italic">
+                  {hintData.mnemonic}
+                </span>
+              )}
+            </div>
             <Input
               id="en"
               ref={inputRefs.en}
@@ -423,7 +412,7 @@ export function Trainer({ words: initialWords, title, onFinish }: TrainerProps) 
               autoCapitalize="none"
               spellCheck={false}
               className={cn(
-                "text-lg h-14 bg-card mt-2",
+                "text-lg h-14 bg-card",
                 enState === 'correct' && "border-green-500 bg-green-50/50 text-green-700 dark:bg-green-950/20 dark:text-green-400 focus-visible:ring-green-500",
                 enState === 'wrong' && "border-red-500 bg-red-50/50 text-red-700 dark:bg-red-950/20 dark:text-red-400 shake focus-visible:ring-red-500"
               )}

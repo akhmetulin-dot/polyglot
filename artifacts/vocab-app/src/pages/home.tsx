@@ -25,10 +25,6 @@ export default function Home() {
 
   return (
     <div className="space-y-8 pb-8 animate-in fade-in duration-500">
-      <header className="space-y-2">
-        <h1 className="text-3xl font-bold font-serif text-primary">С возвращением!</h1>
-        <p className="text-muted-foreground">Ваш ежедневный прогресс ждёт вас.</p>
-      </header>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Card className="border-primary/20 shadow-sm relative overflow-hidden bg-primary text-primary-foreground">
