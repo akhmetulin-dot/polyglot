@@ -58,6 +58,9 @@ export function Trainer({ words: initialWords, title, onFinish }: TrainerProps) 
   const [isEditingMnemonic, setIsEditingMnemonic] = useState(false);
   const [mnemonicDraft, setMnemonicDraft] = useState("");
   const mnemonicRef = useRef<HTMLTextAreaElement>(null);
+
+  // Track focused input for floating hint bar
+  const [focusedField, setFocusedField] = useState<'pl' | 'de' | 'en' | null>(null);
   
   const submitAnswer = useSubmitAnswer();
   const requestHint = useRequestHint();
@@ -341,6 +344,8 @@ export function Trainer({ words: initialWords, title, onFinish }: TrainerProps) 
               value={pl}
               onChange={(e) => setPl(e.target.value)}
               onKeyDown={(e) => handleKeyDown(e, 'de')}
+              onFocus={() => setFocusedField('pl')}
+              onBlur={() => setFocusedField(null)}
               disabled={showNext || isSuccessShake}
               lang="pl"
               autoComplete="off"
@@ -363,6 +368,8 @@ export function Trainer({ words: initialWords, title, onFinish }: TrainerProps) 
               value={de}
               onChange={(e) => setDe(e.target.value)}
               onKeyDown={(e) => handleKeyDown(e, 'en')}
+              onFocus={() => setFocusedField('de')}
+              onBlur={() => setFocusedField(null)}
               disabled={showNext || isSuccessShake}
               lang="de"
               autoComplete="off"
@@ -385,6 +392,8 @@ export function Trainer({ words: initialWords, title, onFinish }: TrainerProps) 
               value={en}
               onChange={(e) => setEn(e.target.value)}
               onKeyDown={(e) => handleKeyDown(e, 'submit')}
+              onFocus={() => setFocusedField('en')}
+              onBlur={() => setFocusedField(null)}
               disabled={showNext || isSuccessShake}
               lang="en"
               autoComplete="off"
@@ -434,6 +443,31 @@ export function Trainer({ words: initialWords, title, onFinish }: TrainerProps) 
           )}
         </div>
       </div>
+
+      {/* ── Floating hint bar — appears when field is focused and hint is open ── */}
+      {hintData && focusedField && (
+        <div className="fixed bottom-0 left-0 right-0 z-40 animate-in slide-in-from-bottom-2 duration-200 pointer-events-none">
+          <div className="max-w-xl mx-auto px-3 pb-3">
+            <div className="bg-primary text-primary-foreground rounded-xl px-4 py-2.5 shadow-lg pointer-events-auto flex items-center gap-3">
+              <Lightbulb className="h-4 w-4 shrink-0 opacity-80" />
+              <div className="flex-1 min-w-0">
+                {focusedField === 'pl' && (
+                  <span className="text-sm font-semibold">🇵🇱 {hintData.polish || '—'}</span>
+                )}
+                {focusedField === 'de' && (
+                  <span className="text-sm font-semibold">🇩🇪 {hintData.german || '—'}</span>
+                )}
+                {focusedField === 'en' && (
+                  <span className="text-sm font-semibold">🇬🇧 {hintData.english || '—'}</span>
+                )}
+                {hintData.mnemonic && (
+                  <span className="text-xs opacity-75 ml-2 truncate">· {hintData.mnemonic}</span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
