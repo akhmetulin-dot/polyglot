@@ -23,7 +23,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Search, Plus, Trash2, Upload, Edit2, FileSpreadsheet, CheckCircle2, ClipboardPaste, Link2, RotateCcw, History } from "lucide-react";
+import { Loader2, Search, Plus, Trash2, Upload, Edit2, FileSpreadsheet, CheckCircle2, ClipboardPaste, Link2, RotateCcw, History, Languages } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const WORD_TYPE_LABELS: Record<string, string> = {
@@ -174,6 +174,7 @@ export default function Words() {
 
   const [isTrashOpen, setIsTrashOpen] = useState(false);
   const [historyWordId, setHistoryWordId] = useState<number | null>(null);
+  const [isTranslating, setIsTranslating] = useState(false);
 
   const { data: trashedWords } = useListTrashedWords({ query: { enabled: isTrashOpen } as never });
   const restoreWord = useRestoreWord();
@@ -271,6 +272,39 @@ export default function Words() {
         toast({ title: "Слово восстановлено" });
       }
     });
+  };
+
+  const handleTranslate = async () => {
+    const word = formData.russian.trim();
+    if (!word) {
+      toast({ title: "Введите слово на русском", variant: "destructive" });
+      return;
+    }
+    setIsTranslating(true);
+    try {
+      const resp = await fetch("/api/words/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: word }),
+      });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        toast({ title: "Ошибка перевода", description: (err as any).error || resp.statusText, variant: "destructive" });
+        return;
+      }
+      const data = await resp.json() as { polish?: string | null; german?: string | null; english?: string | null };
+      setFormData(prev => ({
+        ...prev,
+        polish:  prev.polish  || data.polish  || "",
+        german:  prev.german  || data.german  || "",
+        english: prev.english || data.english || "",
+      }));
+      toast({ title: "Переводы получены", description: "Заполнены пустые поля. Проверьте и поправьте при необходимости." });
+    } catch {
+      toast({ title: "Сервис перевода недоступен", variant: "destructive" });
+    } finally {
+      setIsTranslating(false);
+    }
   };
 
   const applyParsedRows = (rows: Record<string, string>[]) => {
@@ -476,17 +510,33 @@ export default function Words() {
           <div className="space-y-4 py-3">
             <div className="space-y-1.5">
               <Label>Слово на русском <span className="text-destructive">*</span></Label>
-              <Input 
-                value={formData.russian} 
-                onChange={e => setFormData({ ...formData, russian: e.target.value })} 
-                placeholder="Например: дерево"
-                className="font-serif text-lg"
-                lang="ru"
-                autoComplete="off"
-                autoCorrect="off"
-                autoCapitalize="none"
-                spellCheck={false}
-              />
+              <div className="flex gap-2">
+                <Input 
+                  value={formData.russian} 
+                  onChange={e => setFormData({ ...formData, russian: e.target.value })} 
+                  placeholder="Например: дерево"
+                  className="font-serif text-lg"
+                  lang="ru"
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0 h-auto px-3"
+                  onClick={handleTranslate}
+                  disabled={isTranslating || !formData.russian.trim()}
+                  title="Автоматически получить переводы"
+                >
+                  {isTranslating
+                    ? <Loader2 className="h-4 w-4 animate-spin" />
+                    : <Languages className="h-4 w-4" />}
+                </Button>
+              </div>
+              <p className="text-[10px] text-muted-foreground">Нажмите <Languages className="inline h-3 w-3 mx-0.5" /> чтобы получить переводы автоматически — проверьте и поправьте при необходимости.</p>
             </div>
             
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

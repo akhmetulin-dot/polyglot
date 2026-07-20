@@ -97,6 +97,41 @@ router.get("/words/export", async (_req, res): Promise<void> => {
   res.json(exportData);
 });
 
+// ─── Translation via MyMemory (free, no API key needed) ──────────────────────
+router.post("/words/translate", async (req, res): Promise<void> => {
+  const { text } = req.body as { text?: string };
+  if (!text || typeof text !== "string" || !text.trim()) {
+    res.status(400).json({ error: "Параметр text обязателен" });
+    return;
+  }
+  const word = text.trim();
+
+  async function translate(langpair: string): Promise<string> {
+    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(word)}&langpair=${langpair}`;
+    const resp = await fetch(url, { signal: AbortSignal.timeout(5000) });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const json = await resp.json() as { responseData?: { translatedText?: string }; responseStatus?: number };
+    if (json.responseStatus !== 200 && json.responseStatus !== "200" as unknown) throw new Error("Translation failed");
+    return (json.responseData?.translatedText ?? "").trim();
+  }
+
+  try {
+    const [polish, german, english] = await Promise.allSettled([
+      translate("ru|pl"),
+      translate("ru|de"),
+      translate("ru|en"),
+    ]);
+
+    res.json({
+      polish:  polish.status  === "fulfilled" ? polish.value  : null,
+      german:  german.status  === "fulfilled" ? german.value  : null,
+      english: english.status === "fulfilled" ? english.value : null,
+    });
+  } catch {
+    res.status(502).json({ error: "Сервис перевода недоступен" });
+  }
+});
+
 // ─── Fetch-sheet proxy (Google Sheets / public CSV URL) ──────────────────────
 router.get("/words/fetch-sheet", async (req, res): Promise<void> => {
   const rawUrl = req.query.url as string;
