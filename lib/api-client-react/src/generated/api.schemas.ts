@@ -70,6 +70,13 @@ export interface Word {
   wordGroup?: string | null;
   /** Priority for Прописи ordering (0 = normal, 1 = high — words that were answered wrong) */
   priority?: number;
+  /** Consecutive correct SRS answers — resets to 0 on wrong answer */
+  consecutiveCorrect?: number;
+  /**
+     * When set — word is fully learned and removed from active review rotation
+     * @nullable
+     */
+  graduatedAt?: string | null;
   /**
      * Soft-delete timestamp; null means active, non-null means in trash
      * @nullable
@@ -216,6 +223,8 @@ export interface Settings {
   traceError: number;
   /** Number of trace repetitions for error-review words */
   traceErrorReview: number;
+  /** Consecutive correct SRS answers required to graduate a word (fully learned) */
+  graduationThreshold: number;
 }
 
 export interface SettingsInput {
@@ -260,6 +269,11 @@ export interface SettingsInput {
      * @maximum 20
      */
   traceErrorReview?: number;
+  /**
+     * @minimum 3
+     * @maximum 30
+     */
+  graduationThreshold?: number;
 }
 
 export interface WordHistoryEvent {

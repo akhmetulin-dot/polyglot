@@ -16,6 +16,8 @@ export const settingsTable = pgTable("settings", {
   traceReview: integer("trace_review").notNull().default(2),
   traceError: integer("trace_error").notNull().default(5),
   traceErrorReview: integer("trace_error_review").notNull().default(5),
+  // After this many consecutive correct SRS answers the word is graduated (fully learned)
+  graduationThreshold: integer("graduation_threshold").notNull().default(7),
 });
 
 export type Settings = typeof settingsTable.$inferSelect;

@@ -29,6 +29,7 @@ function parseSettings(row: typeof settingsTable.$inferSelect) {
     traceReview: row.traceReview,
     traceError: row.traceError,
     traceErrorReview: row.traceErrorReview,
+    graduationThreshold: row.graduationThreshold,
   };
 }
 
@@ -73,6 +74,9 @@ router.put("/settings", async (req, res): Promise<void> => {
   }
   if (parsed.data.traceErrorReview !== undefined) {
     updateData.traceErrorReview = parsed.data.traceErrorReview;
+  }
+  if (parsed.data.graduationThreshold !== undefined) {
+    updateData.graduationThreshold = parsed.data.graduationThreshold;
   }
 
   const [updated] = await db

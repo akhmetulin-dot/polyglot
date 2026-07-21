@@ -51,6 +51,13 @@ export interface Word {
   wordGroup?: string | null;
   /** Priority for Прописи ordering (0 = normal, 1 = high — words that were answered wrong) */
   priority?: number;
+  /** Consecutive correct SRS answers — resets to 0 on wrong answer */
+  consecutiveCorrect?: number;
+  /**
+     * When set — word is fully learned and removed from active review rotation
+     * @nullable
+     */
+  graduatedAt?: Date | null;
   /**
      * Soft-delete timestamp; null means active, non-null means in trash
      * @nullable

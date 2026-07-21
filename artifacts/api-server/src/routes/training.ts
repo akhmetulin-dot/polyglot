@@ -32,6 +32,7 @@ async function getSettings() {
       reviewIntervals: [3, 5, 9, 13],
       errorRepeatAfter: 5,
       totalSessions: 0,
+      graduationThreshold: 7,
       settingsId: null as number | null,
     };
   }
@@ -40,6 +41,7 @@ async function getSettings() {
     errorRepeatAfter: settings.errorRepeatAfter,
     reviewIntervals: settings.reviewIntervals.split(",").map(Number).filter(Boolean),
     totalSessions: settings.totalSessions,
+    graduationThreshold: settings.graduationThreshold,
     settingsId: settings.id,
   };
 }
@@ -52,7 +54,7 @@ async function logEvent(
   await db.insert(wordEventsTable).values({ wordId, eventType, sessionNumber });
 }
 
-// Get words for a new training session (new words only — nextReviewAt IS NULL)
+// Get words for a new training session (new words only — nextReviewAt IS NULL, not graduated)
 router.get("/training/session", async (req, res): Promise<void> => {
   const parsed = GetTrainingSessionQueryParams.safeParse(req.query);
   if (!parsed.success) {
@@ -109,49 +111,57 @@ router.post("/training/answer", async (req, res): Promise<void> => {
   const englishCorrect = isCorrect(english, word.english);
   const allCorrect = polishCorrect && germanCorrect && englishCorrect;
 
+  // isInReview = word has been through Прописи+Тест at least once (has SRS data)
   const isInReview = word.nextReviewSession !== null;
   const settings = await getSettings();
+  const intervals = settings.reviewIntervals;
+  const currentSession = settings.totalSessions;
 
   if (allCorrect) {
-    const intervals = settings.reviewIntervals;
-    const currentSession = settings.totalSessions;
     const nextIntervalIndex = Math.min(word.reviewInterval, intervals.length - 1);
     const nextInterval = intervals[nextIntervalIndex] ?? intervals[intervals.length - 1] ?? 3;
     const nextReviewSession = currentSession + nextInterval;
+    const newConsecutiveCorrect = (word.consecutiveCorrect ?? 0) + 1;
+    const threshold = settings.graduationThreshold;
+    const isGraduating = isInReview && newConsecutiveCorrect >= threshold;
 
     await db
       .update(wordsTable)
       .set({
         correctCount: word.correctCount + 1,
         reviewInterval: word.reviewInterval + 1,
-        priority: 0, // Clear priority on correct answer
+        priority: 0,
+        consecutiveCorrect: isGraduating ? newConsecutiveCorrect : newConsecutiveCorrect,
+        graduatedAt: isGraduating ? new Date() : word.graduatedAt,
         nextReviewAt: new Date(),
-        nextReviewSession,
+        // Graduated words get a very long next session so they don't appear in due query
+        nextReviewSession: isGraduating ? currentSession + 9999 : nextReviewSession,
       })
       .where(eq(wordsTable.id, wordId));
 
-    // Log event
-    await logEvent(wordId, isInReview ? "review_correct" : "correct", settings.totalSessions);
+    await logEvent(wordId, isGraduating ? "graduated" : isInReview ? "review_correct" : "correct", currentSession);
   } else {
     if (isInReview) {
-      // Wrong in review → reset to new-word queue, mark high priority so it surfaces first in Прописи
+      // Wrong in Повторение → stay in SRS (don't reset to new/Прописи), but reset interval
+      // Word will reappear in next session's review queue
       await db
         .update(wordsTable)
         .set({
-          nextReviewAt: null,
-          nextReviewSession: null,
-          reviewInterval: 0,
-          priority: 1,
+          nextReviewAt: new Date(),           // keeps it in SRS — NOT null (no Прописи)
+          nextReviewSession: currentSession + 1, // due in next session
+          reviewInterval: 0,                  // restart interval progression
+          consecutiveCorrect: 0,              // reset streak
+          priority: 1,                        // surface first
         })
         .where(eq(wordsTable.id, wordId));
-      await logEvent(wordId, "review_wrong", settings.totalSessions);
+      await logEvent(wordId, "review_wrong", currentSession);
     } else {
-      // Wrong in training → mark high priority so it surfaces first in Прописи next time
+      // Wrong in Тест (first time after Прописи) → stays in new queue, surfaces first next time
       await db
         .update(wordsTable)
         .set({ priority: 1 })
         .where(eq(wordsTable.id, wordId));
-      await logEvent(wordId, "wrong", settings.totalSessions);
+      await logEvent(wordId, "wrong", currentSession);
     }
   }
 
@@ -221,7 +231,7 @@ router.post("/training/complete", async (_req, res): Promise<void> => {
   res.json(CompleteSessionResponse.parse({ totalSessions: newTotal }));
 });
 
-// Get words due for SRS review based on session count
+// Get words due for SRS review — excludes graduated words
 router.get("/review/due", async (req, res): Promise<void> => {
   const parsed = GetDueReviewsQueryParams.safeParse(req.query);
   if (!parsed.success) {
@@ -241,6 +251,7 @@ router.get("/review/due", async (req, res): Promise<void> => {
         isNotNull(wordsTable.nextReviewSession),
         lte(wordsTable.nextReviewSession, currentSession),
         isNull(wordsTable.deletedAt),
+        isNull(wordsTable.graduatedAt), // Exclude fully learned words
       ),
     )
     .orderBy(asc(wordsTable.nextReviewSession))

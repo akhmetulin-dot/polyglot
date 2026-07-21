@@ -48,4 +48,9 @@ export interface SettingsInput {
      * @maximum 20
      */
   traceErrorReview?: number;
+  /**
+     * @minimum 3
+     * @maximum 30
+     */
+  graduationThreshold?: number;
 }

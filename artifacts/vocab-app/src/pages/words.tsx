@@ -9,7 +9,6 @@ import {
   useUpdateWord,
   useDeleteWord,
   useBulkImportWords,
-  useMarkWordFamiliar,
   getListWordsQueryKey,
   Word,
   ListWordsSortBy
@@ -24,7 +23,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Search, Plus, Trash2, Upload, Edit2, FileSpreadsheet, CheckCircle2, ClipboardPaste, Link2, RotateCcw, History, Languages, Download, X, Star } from "lucide-react";
+import { Loader2, Search, Plus, Trash2, Upload, Edit2, FileSpreadsheet, CheckCircle2, ClipboardPaste, Link2, RotateCcw, History, Languages, Download, X, GraduationCap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const WORD_TYPE_LABELS: Record<string, string> = {
@@ -181,7 +180,7 @@ export default function Words() {
 
   const { data: trashedWords } = useListTrashedWords({ query: { enabled: isTrashOpen } as never });
   const restoreWord = useRestoreWord();
-  const markFamiliar = useMarkWordFamiliar();
+
   const { data: wordHistory } = useGetWordHistory(historyWordId ?? 0, { query: { enabled: historyWordId !== null } as never });
 
   const [formData, setFormData] = useState({
@@ -270,17 +269,6 @@ export default function Words() {
         }
       });
     }
-  };
-
-  const handleMarkFamiliar = (id: number, e: React.MouseEvent) => {
-    e.stopPropagation(); // Don't open the edit dialog
-    if (!confirm("Отметить слово как знакомое? Оно пропустит Прописи и сразу попадёт в очередь Повторения.")) return;
-    markFamiliar.mutate({ id }, {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getListWordsQueryKey() });
-        toast({ title: "Отмечено как знакомое", description: "Слово добавлено в очередь Повторения." });
-      }
-    });
   };
 
   const handleRestoreWord = (id: number) => {
@@ -608,15 +596,8 @@ export default function Words() {
                   )}
                 </div>
                 <div className="flex items-center gap-1 shrink-0 mt-0.5">
-                  {/* Mark familiar — only for new words (not yet in SRS) */}
-                  {!word.nextReviewAt && (
-                    <button
-                      title="Уже знакомо — пропустить Прописи"
-                      className="p-1.5 rounded-md text-muted-foreground/30 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-colors"
-                      onClick={(e) => handleMarkFamiliar(word.id, e)}
-                    >
-                      <Star className="h-3.5 w-3.5" />
-                    </button>
+                  {word.graduatedAt && (
+                    <span title="Выучено"><GraduationCap className="h-4 w-4 text-emerald-500 shrink-0" /></span>
                   )}
                   <Edit2 className="h-4 w-4 text-muted-foreground/30" />
                 </div>
@@ -628,7 +609,7 @@ export default function Words() {
 
       {/* Add / Edit word dialog */}
       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-        <DialogContent className="w-[95vw] max-w-md max-h-[85svh] overflow-y-auto overscroll-y-contain p-5 top-[5%] translate-y-0 sm:top-[50%] sm:translate-y-[-50%]">
+        <DialogContent className="w-[95vw] max-w-md max-h-[90svh] overflow-y-auto overscroll-y-contain p-5 top-[2%] translate-y-0 sm:top-[50%] sm:translate-y-[-50%]">
           <DialogHeader>
             <DialogTitle>{editingWord ? "Редактировать слово" : "Новое слово"}</DialogTitle>
           </DialogHeader>

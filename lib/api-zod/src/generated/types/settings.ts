@@ -28,4 +28,6 @@ export interface Settings {
   traceError: number;
   /** Number of trace repetitions for error-review words */
   traceErrorReview: number;
+  /** Consecutive correct SRS answers required to graduate a word (fully learned) */
+  graduationThreshold: number;
 }

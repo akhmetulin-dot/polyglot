@@ -24,6 +24,10 @@ export const wordsTable = pgTable("words", {
   wordGroup: text("word_group"),
   // Priority for Прописи ordering: 0 = normal, 1 = high (wrong-answer words come first)
   priority: integer("priority").notNull().default(0),
+  // Consecutive correct answers in SRS — used for graduation
+  consecutiveCorrect: integer("consecutive_correct").notNull().default(0),
+  // When set: word is fully learned and removed from active review rotation
+  graduatedAt: timestamp("graduated_at"),
   // Soft delete: null = active, non-null = in trash
   deletedAt: timestamp("deleted_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),

@@ -481,6 +481,14 @@ components:
           type: integer
           description: Priority for Прописи ordering (0 = normal, 1 = high — words that were answered wrong)
           default: 0
+        consecutiveCorrect:
+          type: integer
+          description: Consecutive correct SRS answers — resets to 0 on wrong answer
+          default: 0
+        graduatedAt:
+          type: ["string", "null"]
+          format: date-time
+          description: When set — word is fully learned and removed from active review rotation
         deletedAt:
           type: ["string", "null"]
           format: date-time
@@ -670,7 +678,7 @@ components:
 
     Settings:
       type: object
-      required: [id, errorRepeatAfter, reviewIntervals, sessionSize, reviewSessionSize, totalSessions, traceSessionSize, traceNew, traceReview, traceError, traceErrorReview]
+      required: [id, errorRepeatAfter, reviewIntervals, sessionSize, reviewSessionSize, totalSessions, traceSessionSize, traceNew, traceReview, traceError, traceErrorReview, graduationThreshold]
       properties:
         id:
           type: integer
@@ -706,6 +714,9 @@ components:
         traceErrorReview:
           type: integer
           description: Number of trace repetitions for error-review words
+        graduationThreshold:
+          type: integer
+          description: Consecutive correct SRS answers required to graduate a word (fully learned)
 
     SettingsInput:
       type: object
@@ -746,6 +757,10 @@ components:
           type: integer
           minimum: 1
           maximum: 20
+        graduationThreshold:
+          type: integer
+          minimum: 3
+          maximum: 30
 
     WordHistoryEvent:
       type: object
