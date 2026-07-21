@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import * as XLSX from "xlsx";
 import { 
   useListWords,
@@ -163,6 +163,20 @@ export default function Words() {
   
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  // iOS keyboard fix: when keyboard opens, scroll focused element into view
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const onResize = () => {
+      const focused = document.activeElement as HTMLElement | null;
+      if (focused && focused.tagName !== "BODY") {
+        setTimeout(() => focused.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
+      }
+    };
+    vv.addEventListener("resize", onResize);
+    return () => vv.removeEventListener("resize", onResize);
+  }, []);
 
   const { data: wordsData, isLoading } = useListWords({ 
     search: debouncedSearch || undefined, 
@@ -553,28 +567,17 @@ export default function Words() {
               className="cursor-pointer hover:border-primary/50 transition-colors bg-card/60 backdrop-blur-sm"
               onClick={() => handleOpenEdit(word)}
             >
-              <CardContent className="p-3 flex items-center justify-between gap-3">
-                <div className="min-w-0 flex-1 space-y-0.5">
-                  {/* Single line: Russian — PL — DE — EN, never wraps */}
-                  <p className="overflow-hidden whitespace-nowrap overflow-ellipsis leading-snug">
-                    <span className="font-bold text-base font-serif">{word.russian}</span>
-                    {word.polish && <span className="text-sm text-muted-foreground"> — {word.polish}</span>}
-                    {word.german && <span className="text-sm text-muted-foreground"> — {word.german}</span>}
-                    {word.english && <span className="text-sm text-muted-foreground"> — {word.english}</span>}
-                  </p>
-                  {word.mnemonic && (
-                    <p className="text-xs text-primary/60 italic leading-relaxed">{word.mnemonic}</p>
-                  )}
-                </div>
-                <div className="flex items-center gap-1.5 shrink-0">
-                  {word.graduatedAt && (
-                    <span title="Выучено"><GraduationCap className="h-3.5 w-3.5 text-emerald-500" /></span>
-                  )}
-                  {(word.priority ?? 0) > 0 && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400" title="Высокий приоритет" />
-                  )}
-                  <Edit2 className="h-4 w-4 text-muted-foreground/30" />
-                </div>
+              <CardContent className="p-3">
+                {/* Full-width single line: Russian — PL — DE — EN */}
+                <p className="overflow-hidden whitespace-nowrap overflow-ellipsis leading-snug">
+                  <span className="font-bold text-base font-serif">{word.russian}</span>
+                  {word.polish && <span className="text-sm text-muted-foreground"> — {word.polish}</span>}
+                  {word.german && <span className="text-sm text-muted-foreground"> — {word.german}</span>}
+                  {word.english && <span className="text-sm text-muted-foreground"> — {word.english}</span>}
+                </p>
+                {word.mnemonic && (
+                  <p className="text-xs text-primary/60 italic mt-0.5 leading-relaxed">{word.mnemonic}</p>
+                )}
               </CardContent>
             </Card>
           ))}

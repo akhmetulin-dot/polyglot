@@ -348,8 +348,8 @@ export default function Settings() {
         </CardContent>
       </Card>
 
-      {/* Sticky save bar — always visible above keyboard/bottom edge */}
-      <div className="sticky bottom-0 bg-background/95 backdrop-blur-sm border-t pt-3 pb-4 -mx-4 px-4 flex gap-3">
+      {/* Sticky save bar — always visible */}
+      <div className="sticky bottom-0 bg-background/95 backdrop-blur-sm border-t pt-3 pb-4 flex gap-2">
         <Button
           variant="outline"
           className="flex-1"
@@ -371,13 +371,12 @@ export default function Settings() {
           Сбросить
         </Button>
         <Button 
-          size="lg" 
-          className="flex-[2]" 
+          className="flex-[2] min-w-0" 
           onClick={handleSave}
           disabled={updateSettings.isPending}
         >
-          {updateSettings.isPending ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Save className="mr-2 h-5 w-5" />}
-          Сохранить настройки
+          {updateSettings.isPending ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin shrink-0" /> : <Save className="mr-1.5 h-4 w-4 shrink-0" />}
+          <span className="truncate">Сохранить настройки</span>
         </Button>
       </div>
     </div>
