@@ -1,0 +1,34 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" rx="96" fill="#1e3a5f"/>
+  <!-- Book pages -->
+  <rect x="120" y="140" width="272" height="220" rx="12" fill="#ffffff" opacity="0.12"/>
+  <!-- Open book left page -->
+  <rect x="132" y="152" width="118" height="196" rx="8" fill="#f0f4f8"/>
+  <!-- Open book right page -->
+  <rect x="262" y="152" width="118" height="196" rx="8" fill="#f8f9fa"/>
+  <!-- Spine -->
+  <rect x="248" y="152" width="16" height="196" fill="#cbd5e1"/>
+  <!-- Lines on left page -->
+  <rect x="148" y="180" width="86" height="6" rx="3" fill="#94a3b8"/>
+  <rect x="148" y="198" width="70" height="6" rx="3" fill="#94a3b8"/>
+  <rect x="148" y="216" width="80" height="6" rx="3" fill="#94a3b8"/>
+  <rect x="148" y="234" width="60" height="6" rx="3" fill="#94a3b8"/>
+  <rect x="148" y="252" width="75" height="6" rx="3" fill="#94a3b8"/>
+  <!-- Lines on right page — colored accent -->
+  <rect x="278" y="180" width="86" height="6" rx="3" fill="#3b82f6"/>
+  <rect x="278" y="198" width="60" height="6" rx="3" fill="#3b82f6" opacity="0.7"/>
+  <rect x="278" y="216" width="75" height="6" rx="3" fill="#3b82f6" opacity="0.5"/>
+  <rect x="278" y="234" width="50" height="6" rx="3" fill="#3b82f6" opacity="0.4"/>
+  <!-- Р letter (Russian) -->
+  <text x="152" y="310" font-family="serif" font-size="48" font-weight="bold" fill="#1e3a5f">Р</text>
+  <!-- Arrow -->
+  <text x="198" y="310" font-family="sans-serif" font-size="32" fill="#64748b">→</text>
+  <!-- PL flag colors hint -->
+  <rect x="278" y="285" width="86" height="14" rx="3" fill="#dc2626"/>
+  <rect x="278" y="301" width="86" height="14" rx="3" fill="#ffffff" opacity="0.8"/>
+  <!-- Tagline dots: 3 languages -->
+  <circle cx="208" cy="380" r="10" fill="#ef4444"/>
+  <circle cx="240" cy="380" r="10" fill="#f59e0b"/>
+  <circle cx="272" cy="380" r="10" fill="#22c55e"/>
+  <circle cx="304" cy="380" r="10" fill="#3b82f6"/>
+</svg>
