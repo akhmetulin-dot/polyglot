@@ -28,7 +28,7 @@ import { useToast } from "@/hooks/use-toast";
 
 const WORD_TYPE_LABELS: Record<string, string> = {
   academic: "Академическое",
-  everyday: "Бытовое",
+  everyday: "Базовое",
   mixed: "Смешанное",
 };
 
@@ -493,7 +493,7 @@ export default function Words() {
           <SelectContent>
             <SelectItem value="all">Все типы</SelectItem>
             <SelectItem value="academic">Академические</SelectItem>
-            <SelectItem value="everyday">Бытовые</SelectItem>
+            <SelectItem value="everyday">Базовые</SelectItem>
             <SelectItem value="mixed">Смешанные</SelectItem>
             <SelectItem value="none">Без типа</SelectItem>
           </SelectContent>
@@ -567,7 +567,7 @@ export default function Words() {
                     )}
                     {word.wordType && (
                       <Badge variant="outline" className="text-[10px] text-muted-foreground/60 ml-1">
-                        {word.wordType === "academic" ? "акад" : word.wordType === "everyday" ? "быт" : "смеш"}
+                        {word.wordType === "academic" ? "акад" : word.wordType === "everyday" ? "база" : "смеш"}
                       </Badge>
                     )}
                     {(word.hintCount ?? 0) >= 3 && (word.correctCount ?? 0) === 0 && (
@@ -684,15 +684,15 @@ export default function Words() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>Контекст</Label>
+                <Label>Группа</Label>
                 <Select value={formData.wordType || "__none__"} onValueChange={v => setFormData({ ...formData, wordType: v === "__none__" ? "" : v })}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Не указан" />
+                    <SelectValue placeholder="Не указана" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__none__">Не указан</SelectItem>
+                    <SelectItem value="__none__">Не указана</SelectItem>
                     <SelectItem value="academic">Академическое</SelectItem>
-                    <SelectItem value="everyday">Бытовое</SelectItem>
+                    <SelectItem value="everyday">Базовое</SelectItem>
                     <SelectItem value="mixed">Смешанное</SelectItem>
                   </SelectContent>
                 </Select>

@@ -124,6 +124,20 @@ router.post("/words/translate", async (req, res): Promise<void> => {
     return (json.responseData?.translatedText ?? "").trim();
   }
 
+  // Filter out bad MyMemory results: "?", punctuation-only, or the original word echoed back
+  function clean(result: string): string | null {
+    const t = result.trim();
+    if (!t) return null;
+    // Remove if it's just punctuation/symbols
+    if (/^[?,.\s!*]+$/.test(t)) return null;
+    // Remove if it matches the original word (case-insensitive, ignoring punctuation)
+    const normalize = (s: string) => s.toLowerCase().replace(/[^a-zа-яёa-ząćęłńóśźż]/gi, "");
+    if (normalize(t) === normalize(word)) return null;
+    // Remove trailing/leading commas, question marks, junk
+    const cleaned = t.replace(/^[,?.\s]+|[,?.\s]+$/g, "").trim();
+    return cleaned || null;
+  }
+
   try {
     const [polish, german, english] = await Promise.allSettled([
       translate("ru|pl"),
@@ -132,9 +146,9 @@ router.post("/words/translate", async (req, res): Promise<void> => {
     ]);
 
     res.json({
-      polish:  polish.status  === "fulfilled" ? polish.value  : null,
-      german:  german.status  === "fulfilled" ? german.value  : null,
-      english: english.status === "fulfilled" ? english.value : null,
+      polish:  polish.status  === "fulfilled" ? clean(polish.value)  : null,
+      german:  german.status  === "fulfilled" ? clean(german.value)  : null,
+      english: english.status === "fulfilled" ? clean(english.value) : null,
     });
   } catch {
     res.status(502).json({ error: "Сервис перевода недоступен" });
