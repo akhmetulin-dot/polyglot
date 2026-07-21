@@ -26,7 +26,7 @@ export default function Review() {
           <p className="text-muted-foreground">Всё повторено! Возвращайтесь позже или продолжайте изучать новые слова.</p>
         </div>
         <div className="flex gap-3">
-          <Link href="/train"><Button variant="outline">Тренировка</Button></Link>
+          <Link href="/train"><Button variant="outline">Тест</Button></Link>
           <Link href="/"><Button>Главная</Button></Link>
         </div>
       </div>

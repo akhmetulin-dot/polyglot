@@ -113,12 +113,15 @@ export function TraceTrainer({
         </div>
         <h2 className="text-3xl font-bold font-serif text-primary">Прописи завершены!</h2>
         <p className="text-muted-foreground">{completedWords} слов · {repetitions}× каждое</p>
-        <div className="flex gap-3">
+        <div className="flex gap-3 flex-wrap justify-center">
           <Button size="lg" variant="outline" onClick={() => { setFinished(false); setCompletedWords(0); setWordIndex(0); setRows(Array.from({ length: repetitions }, () => ({ pl: "", de: "", en: "", done: false, flash: false }))); }}>
             Ещё раз
           </Button>
+          <Link href="/train">
+            <Button size="lg">Начать тест →</Button>
+          </Link>
           <Link href="/">
-            <Button size="lg">На главную</Button>
+            <Button size="lg" variant="ghost">На главную</Button>
           </Link>
         </div>
       </div>

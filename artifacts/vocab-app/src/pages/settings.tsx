@@ -150,7 +150,7 @@ export default function Settings() {
         <CardContent className="space-y-8">
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <Label className="text-base">Слов в тренировке</Label>
+              <Label className="text-base">Слов в тесте</Label>
               <span className="font-bold text-lg text-primary">{localSettings.sessionSize}</span>
             </div>
             <Slider 

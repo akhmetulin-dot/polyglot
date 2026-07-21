@@ -33,7 +33,7 @@ export default function Trace() {
   const { data: settings, isLoading: settingsLoading } = useGetSettings();
   const { data: wordsData, isLoading: wordsLoading } = useListWords({ limit: 500 });
   const [sessionKey, setSessionKey] = useState(0);
-  const [category, setCategory] = useState<Category>("all");
+  const [category, setCategory] = useState<Category>("new");
 
   const totalSessions = settings?.totalSessions ?? 0;
 
