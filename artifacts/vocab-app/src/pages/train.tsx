@@ -23,16 +23,16 @@ export default function Train() {
           <BookOpen className="h-12 w-12" />
         </div>
         <div className="space-y-2 max-w-md">
-          <h2 className="text-2xl font-bold font-serif">Нет слов для тренировки</h2>
-          <p className="text-muted-foreground">Добавьте новые слова в словарь, чтобы начать учёбу.</p>
+          <h2 className="text-2xl font-bold font-serif">Нет слов для теста</h2>
+          <p className="text-muted-foreground">Сначала изучите слова в Прописях — потом приходите на тест.</p>
         </div>
         <div className="flex gap-3">
-          <Link href="/words"><Button variant="outline">Словарь</Button></Link>
+          <Link href="/trace"><Button variant="outline">✏️ Прописи</Button></Link>
           <Link href="/"><Button>Главная</Button></Link>
         </div>
       </div>
     );
   }
 
-  return <Trainer words={session.words} title="Ежедневная Тренировка" />;
+  return <Trainer words={session.words} title="Тест" />;
 }

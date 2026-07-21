@@ -275,8 +275,8 @@ export function Trainer({ words: initialWords, title, onFinish }: TrainerProps) 
           <BookOpen className="h-12 w-12" />
         </div>
         <div className="space-y-2 max-w-md">
-          <h2 className="text-2xl font-bold font-serif">Нет слов для тренировки</h2>
-          <p className="text-muted-foreground">Вы можете добавить новые слова в словаре или отдохнуть.</p>
+          <h2 className="text-2xl font-bold font-serif">Нет слов для теста</h2>
+          <p className="text-muted-foreground">Сначала изучите слова в Прописях — потом приходите на тест.</p>
         </div>
         <Link href="/words">
           <Button>Перейти в Словарь</Button>
@@ -313,11 +313,11 @@ export function Trainer({ words: initialWords, title, onFinish }: TrainerProps) 
           </div>
         </div>
         <div className="flex gap-3 mt-4">
-          <Link href="/trace">
-            <Button size="lg" variant="outline">✏️ Прописи</Button>
-          </Link>
           <Link href="/">
-            <Button size="lg">На главную</Button>
+            <Button size="lg" variant="outline">На главную</Button>
+          </Link>
+          <Link href="/review">
+            <Button size="lg">Повторение</Button>
           </Link>
         </div>
       </div>

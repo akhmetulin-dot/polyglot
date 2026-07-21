@@ -28,31 +28,59 @@ export default function Home() {
     <div className="space-y-8 pb-8 animate-in fade-in duration-500">
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Card className="border-primary/20 shadow-sm relative overflow-hidden bg-primary text-primary-foreground">
+
+        {/* ── Прописи — первое знакомство с новыми словами ── */}
+        <Card className="border-primary/20 shadow-sm relative overflow-hidden bg-primary text-primary-foreground sm:col-span-2">
           <div className="absolute right-0 top-0 opacity-10 pointer-events-none translate-x-4 -translate-y-4">
-            <Brain className="w-32 h-32" />
+            <PenLine className="w-32 h-32" />
           </div>
           <CardHeader className="pb-2">
             <CardTitle className="text-primary-foreground/90 font-sans text-sm font-medium flex items-center gap-2">
+              <PenLine className="h-4 w-4" />
+              Прописи
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="text-2xl font-bold font-serif">Изучить новые слова</div>
+              <p className="text-primary-foreground/60 text-sm">Впервые видите слово — пишете и запоминаете</p>
+              {stats && stats.totalWords > 0 && (
+                <p className="text-primary-foreground/40 text-xs">{stats.totalWords} слов в словаре</p>
+              )}
+            </div>
+            <Link href="/trace" className="shrink-0">
+              <Button size="lg" className="bg-background text-foreground hover:bg-background/90">Начать</Button>
+            </Link>
+          </CardContent>
+        </Card>
+
+        {/* ── Тест — проверить что запомнил ── */}
+        <Card className="border-border shadow-sm relative overflow-hidden">
+          <div className="absolute right-0 top-0 opacity-5 pointer-events-none translate-x-4 -translate-y-4">
+            <Brain className="w-24 h-24" />
+          </div>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-muted-foreground text-sm font-medium flex items-center gap-2">
               <Play className="h-4 w-4" />
-              Тренировка
+              Тест
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="text-2xl font-bold font-serif">Изучить новые</div>
+            <div className="text-2xl font-bold font-serif">Проверить себя</div>
             {settings && (
-              <p className="text-primary-foreground/60 text-xs">
+              <p className="text-muted-foreground text-xs">
                 Сессия #{(settings.totalSessions ?? 0) + 1} · до {settings.sessionSize} слов
               </p>
             )}
             <Link href="/train" className="w-full">
-              <Button size="lg" className="w-full bg-background text-foreground hover:bg-background/90" data-testid="button-start-training">
-                Начать
+              <Button variant="outline" size="lg" className="w-full" data-testid="button-start-training">
+                Начать тест
               </Button>
             </Link>
           </CardContent>
         </Card>
 
+        {/* ── Повторение — SRS ── */}
         <Card className="border-border shadow-sm">
           <CardHeader className="pb-2">
             <CardTitle className="text-muted-foreground text-sm font-medium flex items-center gap-2">
@@ -73,25 +101,6 @@ export default function Home() {
           </CardContent>
         </Card>
 
-        <Card className="border-border shadow-sm sm:col-span-2">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-muted-foreground text-sm font-medium flex items-center gap-2">
-              <PenLine className="h-4 w-4" />
-              Прописи
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex items-center justify-between gap-4">
-            <div>
-              <p className="text-sm text-muted-foreground">Обводите слова по образцу — закрепляйте написание мышечной памятью</p>
-              {stats && stats.totalWords > 0 && (
-                <p className="text-xs text-muted-foreground/60 mt-0.5">{stats.totalWords} слов в словаре</p>
-              )}
-            </div>
-            <Link href="/trace">
-              <Button variant="outline">Начать</Button>
-            </Link>
-          </CardContent>
-        </Card>
       </div>
 
       <div className="space-y-4">
