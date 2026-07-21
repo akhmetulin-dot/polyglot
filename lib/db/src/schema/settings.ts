@@ -18,6 +18,8 @@ export const settingsTable = pgTable("settings", {
   traceErrorReview: integer("trace_error_review").notNull().default(5),
   // After this many consecutive correct SRS answers the word is graduated (fully learned)
   graduationThreshold: integer("graduation_threshold").notNull().default(7),
+  // Custom app name shown in header and PWA manifest
+  appName: text("app_name").notNull().default("Полиглот"),
 });
 
 export type Settings = typeof settingsTable.$inferSelect;

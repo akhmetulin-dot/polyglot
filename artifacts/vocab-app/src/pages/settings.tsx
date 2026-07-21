@@ -12,7 +12,7 @@ import { Slider } from "@/components/ui/slider";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Save, RefreshCcw, BookA, PenLine, PlayCircle, RotateCcw, ArrowRight } from "lucide-react";
+import { Loader2, Save, RefreshCcw, BookA, PenLine, PlayCircle, RotateCcw, ArrowRight, Smartphone, Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Settings() {
@@ -31,7 +31,10 @@ export default function Settings() {
     traceReview: number;
     traceError: number;
     traceErrorReview: number;
+    appName: string;
   } | null>(null);
+  const [iconPreview, setIconPreview] = useState<string | null>(null);
+  const [iconFile, setIconFile] = useState<File | null>(null);
 
   // Initialize local settings once
   if (settings && !localSettings && !isLoading) {
@@ -45,8 +48,37 @@ export default function Settings() {
       traceReview: settings.traceReview,
       traceError: settings.traceError,
       traceErrorReview: settings.traceErrorReview,
+      appName: settings.appName,
     });
   }
+
+  const handleIconSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIconFile(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => setIconPreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const handleIconUpload = async () => {
+    if (!iconFile || !iconPreview) return;
+    try {
+      const res = await fetch("/api/app-icon", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dataUrl: iconPreview }),
+      });
+      if (res.ok) {
+        toast({ title: "Иконка загружена", description: "Переустанови приложение на экран домой для применения новой иконки." });
+        setIconFile(null);
+      } else {
+        toast({ title: "Ошибка загрузки", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Ошибка загрузки", variant: "destructive" });
+    }
+  };
 
   const handleSave = () => {
     if (!localSettings) return;
@@ -78,6 +110,7 @@ export default function Settings() {
         traceReview: localSettings.traceReview,
         traceError: localSettings.traceError,
         traceErrorReview: localSettings.traceErrorReview,
+        appName: localSettings.appName || "Полиглот",
       }
     }, {
       onSuccess: (data) => {
@@ -122,6 +155,60 @@ export default function Settings() {
           Повторение
         </div>
       </div>
+
+      {/* Брендинг приложения */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Smartphone className="h-5 w-5 text-primary" />
+            Название и иконка
+          </CardTitle>
+          <CardDescription>
+            Настрой как приложение называется на экране домой и в заголовке.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="space-y-1.5">
+            <Label>Название приложения</Label>
+            <Input
+              value={localSettings.appName}
+              onChange={e => setLocalSettings({ ...localSettings, appName: e.target.value })}
+              placeholder="Полиглот"
+              maxLength={40}
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
+              onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: "smooth", block: "center" }), 300)}
+            />
+            <p className="text-[11px] text-muted-foreground">Сохрани настройки — название обновится в заголовке и в файле PWA-манифеста.</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Иконка приложения</Label>
+            <div className="flex items-center gap-4">
+              <div className="h-16 w-16 rounded-xl border-2 border-dashed border-muted-foreground/30 flex items-center justify-center overflow-hidden bg-muted/20 shrink-0">
+                {iconPreview
+                  ? <img src={iconPreview} alt="preview" className="h-full w-full object-cover rounded-xl" />
+                  : <Smartphone className="h-7 w-7 text-muted-foreground/30" />
+                }
+              </div>
+              <div className="space-y-2 flex-1">
+                <label className="flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg border border-dashed border-muted-foreground/40 hover:border-primary/50 transition-colors text-sm text-muted-foreground hover:text-foreground">
+                  <Upload className="h-4 w-4 shrink-0" />
+                  <span>Выбрать картинку</span>
+                  <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={handleIconSelect} />
+                </label>
+                {iconFile && (
+                  <Button size="sm" onClick={handleIconUpload} className="w-full">
+                    Загрузить иконку
+                  </Button>
+                )}
+              </div>
+            </div>
+            <p className="text-[11px] text-muted-foreground">⚠️ После загрузки иконки нужно переустановить приложение (удалить с экрана домой и добавить заново) — это ограничение iOS/Android, обойти нельзя.</p>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Прописи */}
       <Card>
@@ -275,6 +362,7 @@ export default function Settings() {
             traceReview: 2,
             traceError: 5,
             traceErrorReview: 5,
+            appName: localSettings?.appName ?? "Полиглот",
           })}
           disabled={updateSettings.isPending}
         >

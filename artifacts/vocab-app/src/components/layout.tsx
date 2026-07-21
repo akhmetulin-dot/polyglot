@@ -6,6 +6,7 @@ import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/s
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/hooks/use-theme";
 import { UpdateBanner } from "@/components/update-banner";
+import { useGetSettings } from "@workspace/api-client-react";
 
 const navItems = [
   { href: "/", label: "Главная", icon: Home },
@@ -44,6 +45,8 @@ function NavLinks({ onClose }: { onClose?: () => void }) {
 export function Layout({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const { dark, toggle } = useTheme();
+  const { data: settings } = useGetSettings();
+  const appName = settings?.appName || "Полиглот";
 
   return (
     <div className="flex min-h-[100dvh] flex-col bg-background text-foreground md:pl-64">
@@ -55,7 +58,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <div className="h-7 w-7 rounded-md bg-primary flex items-center justify-center text-primary-foreground">
             <BookOpen className="h-4 w-4" />
           </div>
-          <span className="font-serif font-bold text-lg tracking-tight text-primary">Полиглот</span>
+          <span className="font-serif font-bold text-lg tracking-tight text-primary">{appName}</span>
         </div>
 
         <div className="flex items-center gap-1">
@@ -73,7 +76,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground">
                   <BookOpen className="h-5 w-5" />
                 </div>
-                <span className="font-serif font-bold text-xl tracking-tight text-primary">Полиглот</span>
+                <span className="font-serif font-bold text-xl tracking-tight text-primary">{appName}</span>
               </div>
               <NavLinks onClose={() => setOpen(false)} />
             </SheetContent>
@@ -87,7 +90,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground">
             <BookOpen className="h-5 w-5" />
           </div>
-          <span className="font-serif font-bold text-xl tracking-tight text-primary">Полиглот</span>
+          <span className="font-serif font-bold text-xl tracking-tight text-primary">{appName}</span>
         </div>
         <div className="flex flex-col gap-2 flex-1">
           <NavLinks />

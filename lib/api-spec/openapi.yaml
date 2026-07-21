@@ -678,7 +678,7 @@ components:
 
     Settings:
       type: object
-      required: [id, errorRepeatAfter, reviewIntervals, sessionSize, reviewSessionSize, totalSessions, traceSessionSize, traceNew, traceReview, traceError, traceErrorReview, graduationThreshold]
+      required: [id, errorRepeatAfter, reviewIntervals, sessionSize, reviewSessionSize, totalSessions, traceSessionSize, traceNew, traceReview, traceError, traceErrorReview, graduationThreshold, appName]
       properties:
         id:
           type: integer
@@ -717,6 +717,9 @@ components:
         graduationThreshold:
           type: integer
           description: Consecutive correct SRS answers required to graduate a word (fully learned)
+        appName:
+          type: string
+          description: Custom app name shown in the header and PWA manifest
 
     SettingsInput:
       type: object
@@ -761,6 +764,10 @@ components:
           type: integer
           minimum: 3
           maximum: 30
+        appName:
+          type: string
+          minLength: 1
+          maxLength: 40
 
     WordHistoryEvent:
       type: object

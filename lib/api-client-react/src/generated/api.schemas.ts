@@ -225,6 +225,8 @@ export interface Settings {
   traceErrorReview: number;
   /** Consecutive correct SRS answers required to graduate a word (fully learned) */
   graduationThreshold: number;
+  /** Custom app name shown in the header and PWA manifest */
+  appName: string;
 }
 
 export interface SettingsInput {
@@ -274,6 +276,11 @@ export interface SettingsInput {
      * @maximum 30
      */
   graduationThreshold?: number;
+  /**
+     * @minLength 1
+     * @maxLength 40
+     */
+  appName?: string;
 }
 
 export interface WordHistoryEvent {

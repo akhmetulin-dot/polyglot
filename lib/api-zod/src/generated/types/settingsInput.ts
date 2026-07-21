@@ -53,4 +53,9 @@ export interface SettingsInput {
      * @maximum 30
      */
   graduationThreshold?: number;
+  /**
+     * @minLength 1
+     * @maxLength 40
+     */
+  appName?: string;
 }

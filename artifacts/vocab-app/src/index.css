@@ -134,6 +134,12 @@
   --destructive-foreground: 42 30% 95%;
 }
 
+/* Prevent any element from causing horizontal page scroll */
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
 @layer base {
   * {
     @apply border-border;

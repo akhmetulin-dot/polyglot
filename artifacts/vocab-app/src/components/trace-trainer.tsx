@@ -26,7 +26,6 @@ interface RowState {
 export function TraceTrainer({
   words,
   repetitions = 3,
-  title = "Прописи",
   onFinish,
   headerRight,
 }: TraceTrainerProps) {
@@ -40,7 +39,6 @@ export function TraceTrainer({
 
   const current: Word | undefined = words[wordIndex];
 
-  // Reset rows when word changes
   useEffect(() => {
     setRows(Array.from({ length: repetitions }, () => ({ pl: "", de: "", en: "", done: false, flash: false })));
     setTimeout(() => firstInputRef.current?.focus(), 60);
@@ -63,7 +61,6 @@ export function TraceTrainer({
         next[rowIndex] = { ...row, done: true, flash: true };
         setTimeout(() => {
           setRows(r => r.map((x, i) => i === rowIndex ? { ...x, flash: false } : x));
-          // Count done rows; if all done advance word
           setRows(r => {
             const allDone = r.every(x => x.done);
             if (allDone) {
@@ -77,7 +74,6 @@ export function TraceTrainer({
                 setWordIndex(nextWord);
               }
             } else {
-              // Focus the first undone row's first input
               const firstUndone = r.findIndex(x => !x.done);
               if (firstUndone >= 0) {
                 const el =
@@ -93,6 +89,11 @@ export function TraceTrainer({
       }
       return next;
     });
+  };
+
+  // Scroll focused input into view above keyboard (iOS fix)
+  const handleInputFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    setTimeout(() => e.target.scrollIntoView({ behavior: "smooth", block: "center" }), 300);
   };
 
   if (!words.length) {
@@ -111,18 +112,17 @@ export function TraceTrainer({
         <div className="p-6 bg-primary/10 rounded-full text-primary">
           <Check className="h-12 w-12" />
         </div>
-        <h2 className="text-3xl font-bold font-serif text-primary">Прописи завершены!</h2>
+        <h2 className="text-3xl font-bold font-serif text-primary">Готово!</h2>
         <p className="text-muted-foreground">{completedWords} слов · {repetitions}× каждое</p>
         <div className="flex gap-3 flex-wrap justify-center">
-          <Button size="lg" variant="outline" onClick={() => { setFinished(false); setCompletedWords(0); setWordIndex(0); setRows(Array.from({ length: repetitions }, () => ({ pl: "", de: "", en: "", done: false, flash: false }))); }}>
+          <Button size="lg" variant="outline" onClick={() => {
+            setFinished(false); setCompletedWords(0); setWordIndex(0);
+            setRows(Array.from({ length: repetitions }, () => ({ pl: "", de: "", en: "", done: false, flash: false })));
+          }}>
             Ещё раз
           </Button>
-          <Link href="/train">
-            <Button size="lg">Начать тест →</Button>
-          </Link>
-          <Link href="/">
-            <Button size="lg" variant="ghost">На главную</Button>
-          </Link>
+          <Link href="/train"><Button size="lg">Начать тест →</Button></Link>
+          <Link href="/"><Button size="lg" variant="ghost">На главную</Button></Link>
         </div>
       </div>
     );
@@ -136,41 +136,41 @@ export function TraceTrainer({
   const hasEn = !!current.english;
 
   return (
-    <div className="max-w-xl mx-auto flex flex-col gap-5">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-serif text-muted-foreground">{title}</h1>
-        <div className="flex items-center gap-2">
-          {headerRight}
-          <div className="text-sm font-semibold bg-secondary/50 px-4 py-2 rounded-full flex items-center gap-1 text-primary">
-            <Check className="h-4 w-4" /> {completedWords} / {words.length}
-          </div>
+    <div className="w-full max-w-xl mx-auto flex flex-col gap-4">
+
+      {/* Header — compact: pills left, counter right */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0 flex-1">{headerRight}</div>
+        <div className="text-sm font-semibold bg-secondary/60 px-3 py-1.5 rounded-full flex items-center gap-1 text-primary shrink-0">
+          <Check className="h-3.5 w-3.5" /> {completedWords}/{words.length}
         </div>
       </div>
 
-      <Progress value={progressPercent} className="h-1.5" />
+      <Progress value={progressPercent} className="h-1" />
 
-      {/* Reference line — shows the full word for visual anchoring */}
-      <div className="py-3 px-4 border rounded-xl bg-muted/30 text-center leading-relaxed">
-        <span className="font-bold font-serif text-2xl">{current.russian}</span>
-        {hasPl && <span className="text-muted-foreground text-base ml-3">— {current.polish}</span>}
-        {haDe && <span className="text-muted-foreground text-base ml-3">— {current.german}</span>}
-        {hasEn && <span className="text-muted-foreground text-base ml-3">— {current.english}</span>}
+      {/* Reference card — single line, no horizontal overflow */}
+      <div className="py-3 px-4 border rounded-xl bg-muted/30">
+        <p className="overflow-hidden whitespace-nowrap overflow-ellipsis leading-snug">
+          <span className="font-bold font-serif text-xl">{current.russian}</span>
+          {hasPl && <span className="text-muted-foreground text-sm"> — {current.polish}</span>}
+          {haDe && <span className="text-muted-foreground text-sm"> — {current.german}</span>}
+          {hasEn && <span className="text-muted-foreground text-sm"> — {current.english}</span>}
+        </p>
         {current.mnemonic && (
-          <p className="text-xs text-primary/50 italic mt-1">{current.mnemonic}</p>
+          <p className="text-xs text-primary/50 italic mt-1 truncate">{current.mnemonic}</p>
         )}
       </div>
 
-      {/* Trace rows — ALL rows accessible simultaneously (like lined paper) */}
+      {/* Trace rows */}
       <div className="space-y-2">
         {rows.map((row, i) => (
           <div
             key={i}
             className={cn(
               "grid gap-2 items-center p-2.5 rounded-xl border transition-all duration-300",
-              hasPl && haDe && hasEn ? "grid-cols-[auto_1fr_1fr_1fr_auto]" :
-              (hasPl && haDe) || (hasPl && hasEn) || (haDe && hasEn) ? "grid-cols-[auto_1fr_1fr_auto]" :
-              "grid-cols-[auto_1fr_auto]",
+              hasPl && haDe && hasEn ? "grid-cols-[52px_1fr_1fr_1fr_16px]" :
+              (hasPl && haDe) || (hasPl && hasEn) || (haDe && hasEn) ? "grid-cols-[52px_1fr_1fr_16px]" :
+              "grid-cols-[52px_1fr_16px]",
               row.done && !row.flash && "border-green-400/40 bg-green-50/20 dark:bg-green-950/10",
               row.flash && "success-pulse border-green-500",
               !row.done && !rows.slice(0, i).every(r => r.done) && "opacity-50",
@@ -178,72 +178,60 @@ export function TraceTrainer({
               !row.done && i === 0 && "bg-card border-primary/30 shadow-sm",
             )}
           >
-            {/* Russian */}
+            {/* Russian — fixed width, truncate */}
             <span className={cn(
-              "font-bold font-serif text-sm sm:text-base shrink-0 min-w-[55px] sm:min-w-[70px]",
+              "font-bold font-serif text-sm w-[52px] truncate",
               row.done ? "text-green-600 dark:text-green-400" : "text-foreground"
             )}>
               {current.russian}
             </span>
 
-            {/* PL */}
             {hasPl && (
               <Input
                 id={`trace-input-${i}-pl`}
                 ref={i === 0 ? firstInputRef : undefined}
                 value={row.pl}
                 onChange={e => handleChange(i, "pl", e.target.value)}
+                onFocus={handleInputFocus}
                 placeholder={current.polish ?? ""}
                 disabled={row.done}
                 lang="pl"
                 autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck={false}
-                className={cn(
-                  "h-8 text-sm font-mono min-w-0",
-                  row.done && "border-green-400/60 text-green-700 dark:text-green-400"
-                )}
+                className={cn("h-8 text-sm min-w-0", row.done && "border-green-400/60 text-green-700 dark:text-green-400")}
               />
             )}
-
-            {/* DE */}
             {haDe && (
               <Input
                 id={`trace-input-${i}-de`}
                 ref={i === 0 && !hasPl ? firstInputRef : undefined}
                 value={row.de}
                 onChange={e => handleChange(i, "de", e.target.value)}
+                onFocus={handleInputFocus}
                 placeholder={current.german ?? ""}
                 disabled={row.done}
                 lang="de"
                 autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck={false}
-                className={cn(
-                  "h-8 text-sm font-mono min-w-0",
-                  row.done && "border-green-400/60 text-green-700 dark:text-green-400"
-                )}
+                className={cn("h-8 text-sm min-w-0", row.done && "border-green-400/60 text-green-700 dark:text-green-400")}
               />
             )}
-
-            {/* EN */}
             {hasEn && (
               <Input
                 id={`trace-input-${i}-en`}
                 ref={i === 0 && !hasPl && !haDe ? firstInputRef : undefined}
                 value={row.en}
                 onChange={e => handleChange(i, "en", e.target.value)}
+                onFocus={handleInputFocus}
                 placeholder={current.english ?? ""}
                 disabled={row.done}
                 lang="en"
                 autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck={false}
-                className={cn(
-                  "h-8 text-sm font-mono min-w-0",
-                  row.done && "border-green-400/60 text-green-700 dark:text-green-400"
-                )}
+                className={cn("h-8 text-sm min-w-0", row.done && "border-green-400/60 text-green-700 dark:text-green-400")}
               />
             )}
 
-            {/* Row number or done checkmark */}
             {row.done
               ? <Check className="h-4 w-4 text-green-500 shrink-0" />
-              : <span className="w-4 text-center text-[10px] text-muted-foreground/40 font-mono select-none">{i + 1}</span>
+              : <span className="text-center text-[10px] text-muted-foreground/40 font-mono select-none">{i + 1}</span>
             }
           </div>
         ))}

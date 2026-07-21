@@ -30,4 +30,6 @@ export interface Settings {
   traceErrorReview: number;
   /** Consecutive correct SRS answers required to graduate a word (fully learned) */
   graduationThreshold: number;
+  /** Custom app name shown in the header and PWA manifest */
+  appName: string;
 }

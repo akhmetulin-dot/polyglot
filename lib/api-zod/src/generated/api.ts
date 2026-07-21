@@ -488,7 +488,8 @@ export const GetSettingsResponse = zod.object({
   "traceReview": zod.number().describe('Number of trace repetitions for review words'),
   "traceError": zod.number().describe('Number of trace repetitions for error words'),
   "traceErrorReview": zod.number().describe('Number of trace repetitions for error-review words'),
-  "graduationThreshold": zod.number().describe('Consecutive correct SRS answers required to graduate a word (fully learned)')
+  "graduationThreshold": zod.number().describe('Consecutive correct SRS answers required to graduate a word (fully learned)'),
+  "appName": zod.string().describe('Custom app name shown in the header and PWA manifest')
 })
 
 
@@ -517,6 +518,8 @@ export const updateSettingsBodyTraceErrorReviewMax = 20;
 export const updateSettingsBodyGraduationThresholdMin = 3;
 export const updateSettingsBodyGraduationThresholdMax = 30;
 
+export const updateSettingsBodyAppNameMax = 40;
+
 
 
 export const UpdateSettingsBody = zod.object({
@@ -529,7 +532,8 @@ export const UpdateSettingsBody = zod.object({
   "traceReview": zod.number().min(1).max(updateSettingsBodyTraceReviewMax).optional(),
   "traceError": zod.number().min(1).max(updateSettingsBodyTraceErrorMax).optional(),
   "traceErrorReview": zod.number().min(1).max(updateSettingsBodyTraceErrorReviewMax).optional(),
-  "graduationThreshold": zod.number().min(updateSettingsBodyGraduationThresholdMin).max(updateSettingsBodyGraduationThresholdMax).optional()
+  "graduationThreshold": zod.number().min(updateSettingsBodyGraduationThresholdMin).max(updateSettingsBodyGraduationThresholdMax).optional(),
+  "appName": zod.string().min(1).max(updateSettingsBodyAppNameMax).optional()
 })
 
 export const UpdateSettingsResponse = zod.object({
@@ -544,7 +548,8 @@ export const UpdateSettingsResponse = zod.object({
   "traceReview": zod.number().describe('Number of trace repetitions for review words'),
   "traceError": zod.number().describe('Number of trace repetitions for error words'),
   "traceErrorReview": zod.number().describe('Number of trace repetitions for error-review words'),
-  "graduationThreshold": zod.number().describe('Consecutive correct SRS answers required to graduate a word (fully learned)')
+  "graduationThreshold": zod.number().describe('Consecutive correct SRS answers required to graduate a word (fully learned)'),
+  "appName": zod.string().describe('Custom app name shown in the header and PWA manifest')
 })
 
 
