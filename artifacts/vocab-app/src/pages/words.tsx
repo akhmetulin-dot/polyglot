@@ -9,6 +9,7 @@ import {
   useUpdateWord,
   useDeleteWord,
   useBulkImportWords,
+  useMarkWordFamiliar,
   getListWordsQueryKey,
   Word,
   ListWordsSortBy
@@ -23,7 +24,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Search, Plus, Trash2, Upload, Edit2, FileSpreadsheet, CheckCircle2, ClipboardPaste, Link2, RotateCcw, History, Languages, Download, X } from "lucide-react";
+import { Loader2, Search, Plus, Trash2, Upload, Edit2, FileSpreadsheet, CheckCircle2, ClipboardPaste, Link2, RotateCcw, History, Languages, Download, X, Star } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const WORD_TYPE_LABELS: Record<string, string> = {
@@ -180,6 +181,7 @@ export default function Words() {
 
   const { data: trashedWords } = useListTrashedWords({ query: { enabled: isTrashOpen } as never });
   const restoreWord = useRestoreWord();
+  const markFamiliar = useMarkWordFamiliar();
   const { data: wordHistory } = useGetWordHistory(historyWordId ?? 0, { query: { enabled: historyWordId !== null } as never });
 
   const [formData, setFormData] = useState({
@@ -190,6 +192,7 @@ export default function Words() {
     mnemonic: "",
     frequencyRank: "",
     wordType: "" as string,
+    wordGroup: "" as string,
   });
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -200,7 +203,7 @@ export default function Words() {
   };
 
   const resetForm = () => {
-    setFormData({ russian: "", polish: "", german: "", english: "", mnemonic: "", frequencyRank: "", wordType: "" });
+    setFormData({ russian: "", polish: "", german: "", english: "", mnemonic: "", frequencyRank: "", wordType: "", wordGroup: "" });
     setEditingWord(null);
     setHistoryWordId(null);
   };
@@ -216,6 +219,7 @@ export default function Words() {
       mnemonic: word.mnemonic || "",
       frequencyRank: word.frequencyRank?.toString() || "",
       wordType: word.wordType || "",
+      wordGroup: word.wordGroup || "",
     });
     setEditingWord(word);
     setHistoryWordId(word.id);
@@ -235,6 +239,7 @@ export default function Words() {
       mnemonic: formData.mnemonic.trim() || undefined,
       frequencyRank: formData.frequencyRank ? parseInt(formData.frequencyRank, 10) : undefined,
       wordType: (formData.wordType || undefined) as "academic" | "everyday" | "mixed" | undefined,
+      wordGroup: formData.wordGroup.trim() || undefined,
     };
     if (editingWord) {
       updateWord.mutate({ id: editingWord.id, data: payload }, {
@@ -265,6 +270,17 @@ export default function Words() {
         }
       });
     }
+  };
+
+  const handleMarkFamiliar = (id: number, e: React.MouseEvent) => {
+    e.stopPropagation(); // Don't open the edit dialog
+    if (!confirm("Отметить слово как знакомое? Оно пропустит Прописи и сразу попадёт в очередь Повторения.")) return;
+    markFamiliar.mutate({ id }, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getListWordsQueryKey() });
+        toast({ title: "Отмечено как знакомое", description: "Слово добавлено в очередь Повторения." });
+      }
+    });
   };
 
   const handleRestoreWord = (id: number) => {
@@ -575,13 +591,35 @@ export default function Words() {
                         сложное
                       </Badge>
                     )}
+                    {(word.priority ?? 0) > 0 && (
+                      <Badge variant="outline" className="text-[10px] text-amber-600 border-amber-300 dark:text-amber-400 dark:border-amber-700 ml-1">
+                        ↑ приоритет
+                      </Badge>
+                    )}
+                    {word.wordGroup && (
+                      <Badge variant="secondary" className="text-[10px] text-muted-foreground/60 ml-1">
+                        {word.wordGroup}
+                      </Badge>
+                    )}
                   </div>
                   {/* Mnemonic below */}
                   {word.mnemonic && (
                     <p className="text-xs text-primary/60 italic truncate">{word.mnemonic}</p>
                   )}
                 </div>
-                <Edit2 className="h-4 w-4 text-muted-foreground/30 shrink-0 mt-1" />
+                <div className="flex items-center gap-1 shrink-0 mt-0.5">
+                  {/* Mark familiar — only for new words (not yet in SRS) */}
+                  {!word.nextReviewAt && (
+                    <button
+                      title="Уже знакомо — пропустить Прописи"
+                      className="p-1.5 rounded-md text-muted-foreground/30 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-colors"
+                      onClick={(e) => handleMarkFamiliar(word.id, e)}
+                    >
+                      <Star className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                  <Edit2 className="h-4 w-4 text-muted-foreground/30" />
+                </div>
               </CardContent>
             </Card>
           ))}
@@ -684,19 +722,32 @@ export default function Words() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>Группа</Label>
+                <Label>Тип слова</Label>
                 <Select value={formData.wordType || "__none__"} onValueChange={v => setFormData({ ...formData, wordType: v === "__none__" ? "" : v })}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Не указана" />
+                    <SelectValue placeholder="Не указан" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__none__">Не указана</SelectItem>
+                    <SelectItem value="__none__">Не указан</SelectItem>
                     <SelectItem value="academic">Академическое</SelectItem>
                     <SelectItem value="everyday">Базовое</SelectItem>
                     <SelectItem value="mixed">Смешанное</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Смысловая группа</Label>
+              <Input
+                value={formData.wordGroup}
+                onChange={e => setFormData({ ...formData, wordGroup: e.target.value })}
+                placeholder="Например: движение, эмоции, еда…"
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck={false}
+              />
+              <p className="text-[11px] text-muted-foreground">Метка для группировки синонимов и похожих по смыслу слов. Видна в списке рядом со словом.</p>
             </div>
 
             {/* Per-word analytics / history */}

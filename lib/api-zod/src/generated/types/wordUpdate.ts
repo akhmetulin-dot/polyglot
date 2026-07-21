@@ -16,4 +16,5 @@ export interface WordUpdate {
   mnemonic?: string;
   frequencyRank?: number;
   wordType?: WordUpdateWordType;
+  wordGroup?: string;
 }

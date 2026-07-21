@@ -64,6 +64,13 @@ export interface Word {
      */
   wordType?: WordWordType;
   /**
+     * Semantic group label for synonym/thematic clusters (e.g. "движение")
+     * @nullable
+     */
+  wordGroup?: string | null;
+  /** Priority for Прописи ordering (0 = normal, 1 = high — words that were answered wrong) */
+  priority?: number;
+  /**
      * Soft-delete timestamp; null means active, non-null means in trash
      * @nullable
      */
@@ -89,6 +96,7 @@ export interface WordInput {
   mnemonic?: string;
   frequencyRank?: number;
   wordType?: WordInputWordType;
+  wordGroup?: string;
 }
 
 export type WordUpdateWordType = typeof WordUpdateWordType[keyof typeof WordUpdateWordType];
@@ -109,6 +117,7 @@ export interface WordUpdate {
   mnemonic?: string;
   frequencyRank?: number;
   wordType?: WordUpdateWordType;
+  wordGroup?: string;
 }
 
 export interface WordListResponse {
@@ -197,6 +206,8 @@ export interface Settings {
   reviewSessionSize: number;
   /** Total completed sessions (global counter for session-based SRS) */
   totalSessions: number;
+  /** Number of words per Прописи session */
+  traceSessionSize: number;
   /** Number of trace repetitions for new words */
   traceNew: number;
   /** Number of trace repetitions for review words */
@@ -224,6 +235,11 @@ export interface SettingsInput {
      * @maximum 100
      */
   reviewSessionSize?: number;
+  /**
+     * @minimum 5
+     * @maximum 100
+     */
+  traceSessionSize?: number;
   /**
      * @minimum 1
      * @maximum 20

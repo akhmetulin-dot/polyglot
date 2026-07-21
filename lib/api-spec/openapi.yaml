@@ -193,6 +193,31 @@ paths:
               schema:
                 $ref: "#/components/schemas/WordExport"
 
+  /words/{id}/mark-familiar:
+    post:
+      operationId: markWordFamiliar
+      tags: [words]
+      summary: Mark word as already partially known — skip Прописи and enter SRS directly
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Word added to SRS queue
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Word"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /words/{id}/restore:
     post:
       operationId: restoreWord
@@ -449,6 +474,13 @@ components:
           type: ["string", "null"]
           enum: [academic, everyday, mixed, null]
           description: Usage context of the word
+        wordGroup:
+          type: ["string", "null"]
+          description: Semantic group label for synonym/thematic clusters (e.g. "движение")
+        priority:
+          type: integer
+          description: Priority for Прописи ordering (0 = normal, 1 = high — words that were answered wrong)
+          default: 0
         deletedAt:
           type: ["string", "null"]
           format: date-time
@@ -477,6 +509,8 @@ components:
         wordType:
           type: string
           enum: [academic, everyday, mixed]
+        wordGroup:
+          type: string
 
     WordUpdate:
       type: object
@@ -497,6 +531,8 @@ components:
         wordType:
           type: string
           enum: [academic, everyday, mixed]
+        wordGroup:
+          type: string
 
     WordListResponse:
       type: object
@@ -634,7 +670,7 @@ components:
 
     Settings:
       type: object
-      required: [id, errorRepeatAfter, reviewIntervals, sessionSize, reviewSessionSize, totalSessions, traceNew, traceReview, traceError, traceErrorReview]
+      required: [id, errorRepeatAfter, reviewIntervals, sessionSize, reviewSessionSize, totalSessions, traceSessionSize, traceNew, traceReview, traceError, traceErrorReview]
       properties:
         id:
           type: integer
@@ -655,6 +691,9 @@ components:
         totalSessions:
           type: integer
           description: Total completed sessions (global counter for session-based SRS)
+        traceSessionSize:
+          type: integer
+          description: Number of words per Прописи session
         traceNew:
           type: integer
           description: Number of trace repetitions for new words
@@ -684,6 +723,10 @@ components:
           minimum: 5
           maximum: 100
         reviewSessionSize:
+          type: integer
+          minimum: 5
+          maximum: 100
+        traceSessionSize:
           type: integer
           minimum: 5
           maximum: 100

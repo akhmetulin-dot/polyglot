@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, ilike, or, and, asc, desc, isNull, isNotNull, sql } from "drizzle-orm";
-import { db, wordsTable, wordEventsTable } from "@workspace/db";
+import { db, wordsTable, wordEventsTable, settingsTable } from "@workspace/db";
 import {
   ListWordsQueryParams,
   ListWordsResponse,
@@ -124,6 +124,9 @@ router.post("/words/translate", async (req, res): Promise<void> => {
     return (json.responseData?.translatedText ?? "").trim();
   }
 
+  // true when the Russian input is a single word (no spaces)
+  const isSingleWordInput = !word.includes(" ");
+
   // Filter out bad MyMemory results: "?", punctuation-only, or the original word echoed back
   function clean(result: string): string | null {
     const t = result.trim();
@@ -134,7 +137,24 @@ router.post("/words/translate", async (req, res): Promise<void> => {
     const normalize = (s: string) => s.toLowerCase().replace(/[^a-zа-яёa-ząćęłńóśźż]/gi, "");
     if (normalize(t) === normalize(word)) return null;
     // Remove trailing/leading commas, question marks, junk
-    const cleaned = t.replace(/^[,?.\s]+|[,?.\s]+$/g, "").trim();
+    let cleaned = t.replace(/^[,?.\s]+|[,?.\s]+$/g, "").trim();
+    if (!cleaned) return null;
+    // For single-word Russian input, trim translation to 1-2 words max.
+    // German translations often need article + noun (der/die/das + word), so keep 2 words for German.
+    // For Polish and English, keep only the first word.
+    if (isSingleWordInput) {
+      const words = cleaned.split(/\s+/);
+      if (words.length > 1) {
+        const germanArticles = new Set(["der", "die", "das", "ein", "eine", "einem", "einen", "einer", "des", "dem"]);
+        if (words[0] && germanArticles.has(words[0].toLowerCase())) {
+          // Keep "der/die/das + noun"
+          cleaned = words.slice(0, 2).join(" ");
+        } else {
+          // Take only the first word (removes context like "badanie naukowe" → "badanie")
+          cleaned = words[0] ?? cleaned;
+        }
+      }
+    }
     return cleaned || null;
   }
 
@@ -204,6 +224,46 @@ router.get("/words/:id", async (req, res): Promise<void> => {
     return;
   }
   res.json(GetWordResponse.parse(word));
+});
+
+// ─── Mark as familiar (skip Прописи → enter SRS directly) ───────────────────
+router.post("/words/:id/mark-familiar", async (req, res): Promise<void> => {
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const id = parseInt(raw, 10);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid id" });
+    return;
+  }
+
+  const [word] = await db.select().from(wordsTable).where(eq(wordsTable.id, id));
+  if (!word) {
+    res.status(404).json({ error: "Word not found" });
+    return;
+  }
+
+  // Get settings to compute next review session using the first interval
+  const [settings] = await db.select().from(settingsTable);
+  const intervals = settings?.reviewIntervals?.split(",").map(Number).filter(Boolean) ?? [3, 5, 9, 13];
+  const totalSessions = settings?.totalSessions ?? 0;
+  const firstInterval = intervals[0] ?? 3;
+  const nextReviewSession = totalSessions + firstInterval;
+
+  const [updated] = await db
+    .update(wordsTable)
+    .set({
+      nextReviewAt: new Date(),       // marks as "in SRS queue" (not new)
+      nextReviewSession,              // due after first interval
+      reviewInterval: 1,             // already past first review
+      priority: 0,
+    })
+    .where(eq(wordsTable.id, id))
+    .returning();
+
+  if (!updated) {
+    res.status(404).json({ error: "Word not found" });
+    return;
+  }
+  res.json(updated);
 });
 
 // ─── Restore from trash ───────────────────────────────────────────────────────

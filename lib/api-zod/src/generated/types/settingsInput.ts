@@ -24,6 +24,11 @@ export interface SettingsInput {
      */
   reviewSessionSize?: number;
   /**
+     * @minimum 5
+     * @maximum 100
+     */
+  traceSessionSize?: number;
+  /**
      * @minimum 1
      * @maximum 20
      */

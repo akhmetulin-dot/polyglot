@@ -16,4 +16,5 @@ export interface WordInput {
   mnemonic?: string;
   frequencyRank?: number;
   wordType?: WordInputWordType;
+  wordGroup?: string;
 }

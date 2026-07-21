@@ -24,6 +24,7 @@ function parseSettings(row: typeof settingsTable.$inferSelect) {
     sessionSize: row.sessionSize,
     reviewSessionSize: row.reviewSessionSize,
     totalSessions: row.totalSessions,
+    traceSessionSize: row.traceSessionSize,
     traceNew: row.traceNew,
     traceReview: row.traceReview,
     traceError: row.traceError,
@@ -57,6 +58,9 @@ router.put("/settings", async (req, res): Promise<void> => {
   }
   if (parsed.data.reviewSessionSize !== undefined) {
     updateData.reviewSessionSize = parsed.data.reviewSessionSize;
+  }
+  if (parsed.data.traceSessionSize !== undefined) {
+    updateData.traceSessionSize = parsed.data.traceSessionSize;
   }
   if (parsed.data.traceNew !== undefined) {
     updateData.traceNew = parsed.data.traceNew;

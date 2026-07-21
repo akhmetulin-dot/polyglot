@@ -18,6 +18,8 @@ export interface Settings {
   reviewSessionSize: number;
   /** Total completed sessions (global counter for session-based SRS) */
   totalSessions: number;
+  /** Number of words per Прописи session */
+  traceSessionSize: number;
   /** Number of trace repetitions for new words */
   traceNew: number;
   /** Number of trace repetitions for review words */

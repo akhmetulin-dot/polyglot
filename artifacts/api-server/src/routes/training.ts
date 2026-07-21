@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, isNull, isNotNull, and, lte, asc } from "drizzle-orm";
+import { eq, isNull, isNotNull, and, lte, asc, desc } from "drizzle-orm";
 import { db, wordsTable, settingsTable, wordEventsTable } from "@workspace/db";
 import {
   GetTrainingSessionQueryParams,
@@ -67,7 +67,8 @@ router.get("/training/session", async (req, res): Promise<void> => {
     .select()
     .from(wordsTable)
     .where(and(isNull(wordsTable.nextReviewAt), isNull(wordsTable.deletedAt)))
-    .orderBy(asc(wordsTable.frequencyRank), asc(wordsTable.id))
+    // Priority words (wrong-answer returns) come first, then by frequency rank
+    .orderBy(desc(wordsTable.priority), asc(wordsTable.frequencyRank), asc(wordsTable.id))
     .limit(count);
 
   const sessionWords = words.map((w) => ({
@@ -123,6 +124,7 @@ router.post("/training/answer", async (req, res): Promise<void> => {
       .set({
         correctCount: word.correctCount + 1,
         reviewInterval: word.reviewInterval + 1,
+        priority: 0, // Clear priority on correct answer
         nextReviewAt: new Date(),
         nextReviewSession,
       })
@@ -132,17 +134,23 @@ router.post("/training/answer", async (req, res): Promise<void> => {
     await logEvent(wordId, isInReview ? "review_correct" : "correct", settings.totalSessions);
   } else {
     if (isInReview) {
-      // Wrong in review → reset to new-word queue with priority
+      // Wrong in review → reset to new-word queue, mark high priority so it surfaces first in Прописи
       await db
         .update(wordsTable)
         .set({
           nextReviewAt: null,
           nextReviewSession: null,
           reviewInterval: 0,
+          priority: 1,
         })
         .where(eq(wordsTable.id, wordId));
       await logEvent(wordId, "review_wrong", settings.totalSessions);
     } else {
+      // Wrong in training → mark high priority so it surfaces first in Прописи next time
+      await db
+        .update(wordsTable)
+        .set({ priority: 1 })
+        .where(eq(wordsTable.id, wordId));
       await logEvent(wordId, "wrong", settings.totalSessions);
     }
   }

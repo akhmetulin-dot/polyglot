@@ -45,6 +45,13 @@ export interface Word {
      */
   wordType?: WordWordType;
   /**
+     * Semantic group label for synonym/thematic clusters (e.g. "движение")
+     * @nullable
+     */
+  wordGroup?: string | null;
+  /** Priority for Прописи ordering (0 = normal, 1 = high — words that were answered wrong) */
+  priority?: number;
+  /**
      * Soft-delete timestamp; null means active, non-null means in trash
      * @nullable
      */

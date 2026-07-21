@@ -27,6 +27,8 @@ export const ListWordsQueryParams = zod.object({
   "offset": zod.coerce.number().optional().describe('Page offset')
 })
 
+export const listWordsResponseWordsItemPriorityDefault = 0;
+
 export const ListWordsResponse = zod.object({
   "words": zod.array(zod.object({
   "id": zod.number(),
@@ -42,6 +44,8 @@ export const ListWordsResponse = zod.object({
   "nextReviewSession": zod.number().nullish().describe('Global session number when this word is next due for review'),
   "reviewInterval": zod.number().optional().describe('Number of times reviewed correctly (index into intervals array)'),
   "wordType": zod.union([zod.literal('academic'),zod.literal('everyday'),zod.literal('mixed'),zod.literal(null)]).nullish().describe('Usage context of the word'),
+  "wordGroup": zod.string().nullish().describe('Semantic group label for synonym\/thematic clusters (e.g. \"движение\")'),
+  "priority": zod.number().default(listWordsResponseWordsItemPriorityDefault).describe('Priority for Прописи ordering (0 = normal, 1 = high — words that were answered wrong)'),
   "deletedAt": zod.coerce.date().nullish().describe('Soft-delete timestamp; null means active, non-null means in trash'),
   "createdAt": zod.coerce.date()
 })),
@@ -62,8 +66,11 @@ export const CreateWordBody = zod.object({
   "english": zod.string().optional(),
   "mnemonic": zod.string().optional(),
   "frequencyRank": zod.number().optional(),
-  "wordType": zod.enum(['academic', 'everyday', 'mixed']).optional()
+  "wordType": zod.enum(['academic', 'everyday', 'mixed']).optional(),
+  "wordGroup": zod.string().optional()
 })
+
+export const createWordResponsePriorityDefault = 0;
 
 export const CreateWordResponse = zod.object({
   "id": zod.number(),
@@ -79,6 +86,8 @@ export const CreateWordResponse = zod.object({
   "nextReviewSession": zod.number().nullish().describe('Global session number when this word is next due for review'),
   "reviewInterval": zod.number().optional().describe('Number of times reviewed correctly (index into intervals array)'),
   "wordType": zod.union([zod.literal('academic'),zod.literal('everyday'),zod.literal('mixed'),zod.literal(null)]).nullish().describe('Usage context of the word'),
+  "wordGroup": zod.string().nullish().describe('Semantic group label for synonym\/thematic clusters (e.g. \"движение\")'),
+  "priority": zod.number().default(createWordResponsePriorityDefault).describe('Priority for Прописи ordering (0 = normal, 1 = high — words that were answered wrong)'),
   "deletedAt": zod.coerce.date().nullish().describe('Soft-delete timestamp; null means active, non-null means in trash'),
   "createdAt": zod.coerce.date()
 })
@@ -90,6 +99,8 @@ export const CreateWordResponse = zod.object({
 export const GetWordParams = zod.object({
   "id": zod.coerce.number()
 })
+
+export const getWordResponsePriorityDefault = 0;
 
 export const GetWordResponse = zod.object({
   "id": zod.number(),
@@ -105,6 +116,8 @@ export const GetWordResponse = zod.object({
   "nextReviewSession": zod.number().nullish().describe('Global session number when this word is next due for review'),
   "reviewInterval": zod.number().optional().describe('Number of times reviewed correctly (index into intervals array)'),
   "wordType": zod.union([zod.literal('academic'),zod.literal('everyday'),zod.literal('mixed'),zod.literal(null)]).nullish().describe('Usage context of the word'),
+  "wordGroup": zod.string().nullish().describe('Semantic group label for synonym\/thematic clusters (e.g. \"движение\")'),
+  "priority": zod.number().default(getWordResponsePriorityDefault).describe('Priority for Прописи ordering (0 = normal, 1 = high — words that were answered wrong)'),
   "deletedAt": zod.coerce.date().nullish().describe('Soft-delete timestamp; null means active, non-null means in trash'),
   "createdAt": zod.coerce.date()
 })
@@ -127,8 +140,11 @@ export const UpdateWordBody = zod.object({
   "english": zod.string().optional(),
   "mnemonic": zod.string().optional(),
   "frequencyRank": zod.number().optional(),
-  "wordType": zod.enum(['academic', 'everyday', 'mixed']).optional()
+  "wordType": zod.enum(['academic', 'everyday', 'mixed']).optional(),
+  "wordGroup": zod.string().optional()
 })
+
+export const updateWordResponsePriorityDefault = 0;
 
 export const UpdateWordResponse = zod.object({
   "id": zod.number(),
@@ -144,6 +160,8 @@ export const UpdateWordResponse = zod.object({
   "nextReviewSession": zod.number().nullish().describe('Global session number when this word is next due for review'),
   "reviewInterval": zod.number().optional().describe('Number of times reviewed correctly (index into intervals array)'),
   "wordType": zod.union([zod.literal('academic'),zod.literal('everyday'),zod.literal('mixed'),zod.literal(null)]).nullish().describe('Usage context of the word'),
+  "wordGroup": zod.string().nullish().describe('Semantic group label for synonym\/thematic clusters (e.g. \"движение\")'),
+  "priority": zod.number().default(updateWordResponsePriorityDefault).describe('Priority for Прописи ordering (0 = normal, 1 = high — words that were answered wrong)'),
   "deletedAt": zod.coerce.date().nullish().describe('Soft-delete timestamp; null means active, non-null means in trash'),
   "createdAt": zod.coerce.date()
 })
@@ -162,6 +180,8 @@ export const DeleteWordResponse = zod.void()
 /**
  * @summary List soft-deleted words
  */
+export const listTrashedWordsResponseWordsItemPriorityDefault = 0;
+
 export const ListTrashedWordsResponse = zod.object({
   "words": zod.array(zod.object({
   "id": zod.number(),
@@ -177,6 +197,8 @@ export const ListTrashedWordsResponse = zod.object({
   "nextReviewSession": zod.number().nullish().describe('Global session number when this word is next due for review'),
   "reviewInterval": zod.number().optional().describe('Number of times reviewed correctly (index into intervals array)'),
   "wordType": zod.union([zod.literal('academic'),zod.literal('everyday'),zod.literal('mixed'),zod.literal(null)]).nullish().describe('Usage context of the word'),
+  "wordGroup": zod.string().nullish().describe('Semantic group label for synonym\/thematic clusters (e.g. \"движение\")'),
+  "priority": zod.number().default(listTrashedWordsResponseWordsItemPriorityDefault).describe('Priority for Прописи ordering (0 = normal, 1 = high — words that were answered wrong)'),
   "deletedAt": zod.coerce.date().nullish().describe('Soft-delete timestamp; null means active, non-null means in trash'),
   "createdAt": zod.coerce.date()
 })),
@@ -187,6 +209,8 @@ export const ListTrashedWordsResponse = zod.object({
 /**
  * @summary Export all active words with their history
  */
+export const exportWordsResponseWordsItemPriorityDefault = 0;
+
 export const ExportWordsResponse = zod.object({
   "exportedAt": zod.coerce.date(),
   "words": zod.array(zod.object({
@@ -203,9 +227,41 @@ export const ExportWordsResponse = zod.object({
   "nextReviewSession": zod.number().nullish().describe('Global session number when this word is next due for review'),
   "reviewInterval": zod.number().optional().describe('Number of times reviewed correctly (index into intervals array)'),
   "wordType": zod.union([zod.literal('academic'),zod.literal('everyday'),zod.literal('mixed'),zod.literal(null)]).nullish().describe('Usage context of the word'),
+  "wordGroup": zod.string().nullish().describe('Semantic group label for synonym\/thematic clusters (e.g. \"движение\")'),
+  "priority": zod.number().default(exportWordsResponseWordsItemPriorityDefault).describe('Priority for Прописи ordering (0 = normal, 1 = high — words that were answered wrong)'),
   "deletedAt": zod.coerce.date().nullish().describe('Soft-delete timestamp; null means active, non-null means in trash'),
   "createdAt": zod.coerce.date()
 }))
+})
+
+
+/**
+ * @summary Mark word as already partially known — skip Прописи and enter SRS directly
+ */
+export const MarkWordFamiliarParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const markWordFamiliarResponsePriorityDefault = 0;
+
+export const MarkWordFamiliarResponse = zod.object({
+  "id": zod.number(),
+  "russian": zod.string(),
+  "polish": zod.string().nullish(),
+  "german": zod.string().nullish(),
+  "english": zod.string().nullish(),
+  "mnemonic": zod.string().nullish(),
+  "frequencyRank": zod.number().nullish().describe('Frequency rank in academic dictionary (lower = more frequent)'),
+  "correctCount": zod.number().optional().describe('Total correct answers across all languages'),
+  "hintCount": zod.number().optional().describe('Total hints requested'),
+  "nextReviewAt": zod.coerce.date().nullish().describe('Marker - null means new word, non-null means in SRS queue'),
+  "nextReviewSession": zod.number().nullish().describe('Global session number when this word is next due for review'),
+  "reviewInterval": zod.number().optional().describe('Number of times reviewed correctly (index into intervals array)'),
+  "wordType": zod.union([zod.literal('academic'),zod.literal('everyday'),zod.literal('mixed'),zod.literal(null)]).nullish().describe('Usage context of the word'),
+  "wordGroup": zod.string().nullish().describe('Semantic group label for synonym\/thematic clusters (e.g. \"движение\")'),
+  "priority": zod.number().default(markWordFamiliarResponsePriorityDefault).describe('Priority for Прописи ordering (0 = normal, 1 = high — words that were answered wrong)'),
+  "deletedAt": zod.coerce.date().nullish().describe('Soft-delete timestamp; null means active, non-null means in trash'),
+  "createdAt": zod.coerce.date()
 })
 
 
@@ -215,6 +271,8 @@ export const ExportWordsResponse = zod.object({
 export const RestoreWordParams = zod.object({
   "id": zod.coerce.number()
 })
+
+export const restoreWordResponsePriorityDefault = 0;
 
 export const RestoreWordResponse = zod.object({
   "id": zod.number(),
@@ -230,6 +288,8 @@ export const RestoreWordResponse = zod.object({
   "nextReviewSession": zod.number().nullish().describe('Global session number when this word is next due for review'),
   "reviewInterval": zod.number().optional().describe('Number of times reviewed correctly (index into intervals array)'),
   "wordType": zod.union([zod.literal('academic'),zod.literal('everyday'),zod.literal('mixed'),zod.literal(null)]).nullish().describe('Usage context of the word'),
+  "wordGroup": zod.string().nullish().describe('Semantic group label for synonym\/thematic clusters (e.g. \"движение\")'),
+  "priority": zod.number().default(restoreWordResponsePriorityDefault).describe('Priority for Прописи ordering (0 = normal, 1 = high — words that were answered wrong)'),
   "deletedAt": zod.coerce.date().nullish().describe('Soft-delete timestamp; null means active, non-null means in trash'),
   "createdAt": zod.coerce.date()
 })
@@ -267,7 +327,8 @@ export const BulkImportWordsBody = zod.object({
   "english": zod.string().optional(),
   "mnemonic": zod.string().optional(),
   "frequencyRank": zod.number().optional(),
-  "wordType": zod.enum(['academic', 'everyday', 'mixed']).optional()
+  "wordType": zod.enum(['academic', 'everyday', 'mixed']).optional(),
+  "wordGroup": zod.string().optional()
 }))
 })
 
@@ -309,6 +370,8 @@ export const SubmitAnswerBody = zod.object({
   "english": zod.string()
 })
 
+export const submitAnswerResponseWordPriorityDefault = 0;
+
 export const SubmitAnswerResponse = zod.object({
   "wordId": zod.number(),
   "polishCorrect": zod.boolean(),
@@ -329,6 +392,8 @@ export const SubmitAnswerResponse = zod.object({
   "nextReviewSession": zod.number().nullish().describe('Global session number when this word is next due for review'),
   "reviewInterval": zod.number().optional().describe('Number of times reviewed correctly (index into intervals array)'),
   "wordType": zod.union([zod.literal('academic'),zod.literal('everyday'),zod.literal('mixed'),zod.literal(null)]).nullish().describe('Usage context of the word'),
+  "wordGroup": zod.string().nullish().describe('Semantic group label for synonym\/thematic clusters (e.g. \"движение\")'),
+  "priority": zod.number().default(submitAnswerResponseWordPriorityDefault).describe('Priority for Прописи ordering (0 = normal, 1 = high — words that were answered wrong)'),
   "deletedAt": zod.coerce.date().nullish().describe('Soft-delete timestamp; null means active, non-null means in trash'),
   "createdAt": zod.coerce.date()
 })
@@ -391,6 +456,7 @@ export const GetSettingsResponse = zod.object({
   "sessionSize": zod.number().describe('Default training session word count'),
   "reviewSessionSize": zod.number().describe('Default review session word count'),
   "totalSessions": zod.number().describe('Total completed sessions (global counter for session-based SRS)'),
+  "traceSessionSize": zod.number().describe('Number of words per Прописи session'),
   "traceNew": zod.number().describe('Number of trace repetitions for new words'),
   "traceReview": zod.number().describe('Number of trace repetitions for review words'),
   "traceError": zod.number().describe('Number of trace repetitions for error words'),
@@ -409,6 +475,9 @@ export const updateSettingsBodySessionSizeMax = 100;
 export const updateSettingsBodyReviewSessionSizeMin = 5;
 export const updateSettingsBodyReviewSessionSizeMax = 100;
 
+export const updateSettingsBodyTraceSessionSizeMin = 5;
+export const updateSettingsBodyTraceSessionSizeMax = 100;
+
 export const updateSettingsBodyTraceNewMax = 20;
 
 export const updateSettingsBodyTraceReviewMax = 20;
@@ -424,6 +493,7 @@ export const UpdateSettingsBody = zod.object({
   "reviewIntervals": zod.array(zod.number()).optional(),
   "sessionSize": zod.number().min(updateSettingsBodySessionSizeMin).max(updateSettingsBodySessionSizeMax).optional(),
   "reviewSessionSize": zod.number().min(updateSettingsBodyReviewSessionSizeMin).max(updateSettingsBodyReviewSessionSizeMax).optional(),
+  "traceSessionSize": zod.number().min(updateSettingsBodyTraceSessionSizeMin).max(updateSettingsBodyTraceSessionSizeMax).optional(),
   "traceNew": zod.number().min(1).max(updateSettingsBodyTraceNewMax).optional(),
   "traceReview": zod.number().min(1).max(updateSettingsBodyTraceReviewMax).optional(),
   "traceError": zod.number().min(1).max(updateSettingsBodyTraceErrorMax).optional(),
@@ -437,6 +507,7 @@ export const UpdateSettingsResponse = zod.object({
   "sessionSize": zod.number().describe('Default training session word count'),
   "reviewSessionSize": zod.number().describe('Default review session word count'),
   "totalSessions": zod.number().describe('Total completed sessions (global counter for session-based SRS)'),
+  "traceSessionSize": zod.number().describe('Number of words per Прописи session'),
   "traceNew": zod.number().describe('Number of trace repetitions for new words'),
   "traceReview": zod.number().describe('Number of trace repetitions for review words'),
   "traceError": zod.number().describe('Number of trace repetitions for error words'),

@@ -679,6 +679,77 @@ export function useExportWords<TData = Awaited<ReturnType<typeof exportWords>>, 
 
 
 
+export const getMarkWordFamiliarUrl = (id: number,) => {
+
+
+
+
+  return `/api/words/${id}/mark-familiar`
+}
+
+/**
+ * @summary Mark word as already partially known — skip Прописи and enter SRS directly
+ */
+export const markWordFamiliar = async (id: number, options?: RequestInit): Promise<Word> => {
+
+  return customFetch<Word>(getMarkWordFamiliarUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getMarkWordFamiliarMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markWordFamiliar>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof markWordFamiliar>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['markWordFamiliar'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof markWordFamiliar>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  markWordFamiliar(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type MarkWordFamiliarMutationResult = NonNullable<Awaited<ReturnType<typeof markWordFamiliar>>>
+
+    export type MarkWordFamiliarMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Mark word as already partially known — skip Прописи and enter SRS directly
+ */
+export const useMarkWordFamiliar = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markWordFamiliar>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof markWordFamiliar>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getMarkWordFamiliarMutationOptions(options));
+    }
+
 export const getRestoreWordUrl = (id: number,) => {
 
 

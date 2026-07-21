@@ -9,6 +9,8 @@ export const settingsTable = pgTable("settings", {
   reviewSessionSize: integer("review_session_size").notNull().default(20),
   // Global session counter — incremented each time a training/review session is completed
   totalSessions: integer("total_sessions").notNull().default(0),
+  // Number of words per Прописи session (separate from Тест sessionSize)
+  traceSessionSize: integer("trace_session_size").notNull().default(10),
   // Trace (письмо-обводка) repetition counts per word category
   traceNew: integer("trace_new").notNull().default(3),
   traceReview: integer("trace_review").notNull().default(2),

@@ -51,7 +51,7 @@ export default function Trace() {
     return all;
   }, [wordsData, category, totalSessions]);
 
-  const sessionSize = settings?.sessionSize ?? 20;
+  const sessionSize = settings?.traceSessionSize ?? 10;
   const repetitions =
     category === "new" ? (settings?.traceNew ?? 3) :
     category === "review" ? (settings?.traceReview ?? 2) :
