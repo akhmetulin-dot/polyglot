@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "wouter";
 import { 
   useGetSettings, 
   useUpdateSettings, 
@@ -180,18 +181,18 @@ export default function Settings() {
             Прописи — повторений за слово
           </CardTitle>
           <CardDescription>
-            Сколько раз вводить каждое слово в режиме «Прописи» в зависимости от категории.
+            Сколько раз вводить каждое слово в режиме <Link href="/trace" className="text-primary underline-offset-2 hover:underline">«Прописи»</Link> в зависимости от категории.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {(
             [
-              { key: "traceNew" as const, label: "Новые слова" },
-              { key: "traceReview" as const, label: "Повторения" },
-              { key: "traceError" as const, label: "Ошибки" },
-              { key: "traceErrorReview" as const, label: "Ошибки-повторения" },
+              { key: "traceNew" as const, label: "Новые слова", hint: "Первый раз встречается — обведите больше раз" },
+              { key: "traceReview" as const, label: "Повторения SRS", hint: "Слова из очереди повторения — уже частично знакомы" },
+              { key: "traceError" as const, label: "Слова с ошибками", hint: "После неверного ответа в тренажёре" },
+              { key: "traceErrorReview" as const, label: "Ошибки-повторения", hint: "Ошибка в слове, которое было на повторении" },
             ] as const
-          ).map(({ key, label }) => (
+          ).map(({ key, label, hint }) => (
             <div key={key} className="space-y-3">
               <div className="flex justify-between items-center">
                 <Label className="text-base">{label}</Label>
@@ -202,20 +203,40 @@ export default function Settings() {
                 value={[localSettings[key]]}
                 onValueChange={([val]) => setLocalSettings({ ...localSettings, [key]: val })}
               />
+              <p className="text-xs text-muted-foreground">{hint}</p>
             </div>
           ))}
         </CardContent>
       </Card>
 
-      <Button 
-        size="lg" 
-        className="w-full" 
-        onClick={handleSave}
-        disabled={updateSettings.isPending}
-      >
-        {updateSettings.isPending ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Save className="mr-2 h-5 w-5" />}
-        Сохранить настройки
-      </Button>
+      <div className="flex gap-3">
+        <Button
+          variant="outline"
+          className="flex-1"
+          onClick={() => setLocalSettings({
+            errorRepeatAfter: 5,
+            sessionSize: 20,
+            reviewSessionSize: 20,
+            reviewIntervals: "3, 5, 9, 13",
+            traceNew: 3,
+            traceReview: 2,
+            traceError: 5,
+            traceErrorReview: 5,
+          })}
+          disabled={updateSettings.isPending}
+        >
+          Сбросить
+        </Button>
+        <Button 
+          size="lg" 
+          className="flex-[2]" 
+          onClick={handleSave}
+          disabled={updateSettings.isPending}
+        >
+          {updateSettings.isPending ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Save className="mr-2 h-5 w-5" />}
+          Сохранить настройки
+        </Button>
+      </div>
     </div>
   );
 }

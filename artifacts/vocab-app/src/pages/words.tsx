@@ -23,7 +23,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Search, Plus, Trash2, Upload, Edit2, FileSpreadsheet, CheckCircle2, ClipboardPaste, Link2, RotateCcw, History, Languages, Download } from "lucide-react";
+import { Loader2, Search, Plus, Trash2, Upload, Edit2, FileSpreadsheet, CheckCircle2, ClipboardPaste, Link2, RotateCcw, History, Languages, Download, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const WORD_TYPE_LABELS: Record<string, string> = {
@@ -148,6 +148,8 @@ export default function Words() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [sortBy, setSortBy] = useState<ListWordsSortBy>(ListWordsSortBy.frequency);
+  const [filterType, setFilterType] = useState<string>("all");
+  const [sortDifficult, setSortDifficult] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingWord, setEditingWord] = useState<Word | null>(null);
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
@@ -193,7 +195,7 @@ export default function Words() {
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(e.target.value);
     const val = e.target.value;
-    const timer = setTimeout(() => setDebouncedSearch(val), 400);
+    const timer = setTimeout(() => setDebouncedSearch(val), 250);
     return () => clearTimeout(timer);
   };
 
@@ -415,19 +417,40 @@ export default function Words() {
     <div className="space-y-5 pb-8 animate-in fade-in duration-500">
       <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
+          <div className="flex items-baseline gap-3">
           <h1 className="text-2xl sm:text-3xl font-bold font-serif text-foreground">Словарь</h1>
+          {wordsData && (() => {
+            const filtered = filterType === "all"
+              ? wordsData.words.length
+              : wordsData.words.filter(w =>
+                  filterType === "none" ? !w.wordType : w.wordType === filterType
+                ).length;
+            const showFilter = filterType !== "all" || !!debouncedSearch;
+            return (
+              <span className="text-sm text-muted-foreground font-mono">
+                {showFilter && filterType !== "all" ? `${filtered} / ` : ""}{wordsData.total} сл.
+              </span>
+            );
+          })()}
+        </div>
         </div>
         <div className="flex gap-2">
           <Button variant="ghost" size="sm" onClick={() => setIsTrashOpen(true)} className="text-muted-foreground" title="Корзина">
             <Trash2 className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="sm" className="text-muted-foreground" title="Экспорт словаря с историей" onClick={async () => {
-            const resp = await fetch("/api/words/export");
-            const data = await resp.json();
-            const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+          <Button variant="ghost" size="sm" className="text-muted-foreground" title="Экспорт CSV" onClick={() => {
+            const words = wordsData?.words ?? [];
+            const header = "russian,polish,german,english,mnemonic,frequencyRank,wordType";
+            const rows = words.map(w => [
+              w.russian, w.polish ?? "", w.german ?? "", w.english ?? "",
+              (w.mnemonic ?? "").replace(/,/g, ";"),
+              w.frequencyRank ?? "", w.wordType ?? ""
+            ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(","));
+            const csv = [header, ...rows].join("\n");
+            const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" });
             const url = URL.createObjectURL(blob);
             const a = document.createElement("a");
-            a.href = url; a.download = `vocab-export-${new Date().toISOString().slice(0,10)}.json`;
+            a.href = url; a.download = `vocab-${new Date().toISOString().slice(0,10)}.csv`;
             a.click(); URL.revokeObjectURL(url);
           }}>
             <Download className="h-4 w-4" />
@@ -448,18 +471,48 @@ export default function Words() {
             placeholder="Поиск..." 
             value={search}
             onChange={handleSearchChange}
-            className="pl-9"
+            className="pl-9 pr-8"
             autoComplete="off"
           />
+          {isLoading && search ? (
+            <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+          ) : search ? (
+            <button
+              onClick={() => { setSearch(""); setDebouncedSearch(""); }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="Очистить поиск"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          ) : null}
         </div>
-        <Select value={sortBy} onValueChange={(val: ListWordsSortBy) => setSortBy(val)}>
-          <SelectTrigger className="sm:w-[180px]">
+        <Select value={filterType} onValueChange={setFilterType}>
+          <SelectTrigger className="sm:w-[150px]">
+            <SelectValue placeholder="Тип" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Все типы</SelectItem>
+            <SelectItem value="academic">Академические</SelectItem>
+            <SelectItem value="everyday">Бытовые</SelectItem>
+            <SelectItem value="mixed">Смешанные</SelectItem>
+            <SelectItem value="none">Без типа</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select
+          value={sortDifficult ? "difficult" : sortBy}
+          onValueChange={(val) => {
+            if (val === "difficult") { setSortDifficult(true); }
+            else { setSortDifficult(false); setSortBy(val as ListWordsSortBy); }
+          }}
+        >
+          <SelectTrigger className="sm:w-[160px]">
             <SelectValue placeholder="Сортировка" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value={ListWordsSortBy.frequency}>По частотности</SelectItem>
             <SelectItem value={ListWordsSortBy.createdAt}>Сначала новые</SelectItem>
             <SelectItem value={ListWordsSortBy.russian}>По алфавиту (RU)</SelectItem>
+            <SelectItem value="difficult">Сложные первыми</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -468,6 +521,12 @@ export default function Words() {
         <div className="flex py-20 items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
+      ) : (wordsData?.words.filter(w =>
+            filterType === "all" ? true :
+            filterType === "none" ? !w.wordType :
+            w.wordType === filterType
+          ).length === 0 && filterType !== "all") ? (
+        <div className="text-center py-12 text-muted-foreground">Нет слов с этим типом</div>
       ) : wordsData?.words.length === 0 ? (
         <Card className="border-dashed border-2 bg-transparent text-center py-12">
           <CardContent className="space-y-4 pt-6">
@@ -477,7 +536,14 @@ export default function Words() {
         </Card>
       ) : (
         <div className="space-y-3">
-          {wordsData?.words.map(word => (
+          {(wordsData?.words ?? []).filter(w =>
+            filterType === "all" ? true :
+            filterType === "none" ? !w.wordType :
+            w.wordType === filterType
+          ).sort(sortDifficult
+            ? (a, b) => ((b.hintCount ?? 0) - (b.correctCount ?? 0)) - ((a.hintCount ?? 0) - (a.correctCount ?? 0))
+            : () => 0
+          ).map(word => (
             <Card 
               key={word.id} 
               className="cursor-pointer hover:border-primary/50 transition-colors bg-card/60 backdrop-blur-sm"
@@ -502,6 +568,11 @@ export default function Words() {
                     {word.wordType && (
                       <Badge variant="outline" className="text-[10px] text-muted-foreground/60 ml-1">
                         {word.wordType === "academic" ? "акад" : word.wordType === "everyday" ? "быт" : "смеш"}
+                      </Badge>
+                    )}
+                    {(word.hintCount ?? 0) >= 3 && (word.correctCount ?? 0) === 0 && (
+                      <Badge variant="outline" className="text-[10px] text-destructive/70 border-destructive/30 ml-1">
+                        сложное
                       </Badge>
                     )}
                   </div>
@@ -537,6 +608,7 @@ export default function Words() {
                   autoCorrect="off"
                   autoCapitalize="none"
                   spellCheck={false}
+                  autoFocus
                 />
                 <Button
                   type="button"

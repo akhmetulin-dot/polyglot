@@ -3,10 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Brain, Play, CheckCircle2, Trophy, Clock, Target, BookOpen, PenLine } from "lucide-react";
-import { useGetStats, getGetStatsQueryKey } from "@workspace/api-client-react";
+import { useGetStats, useGetSettings } from "@workspace/api-client-react";
 
 export default function Home() {
   const { data: stats, isLoading } = useGetStats();
+  const { data: settings } = useGetSettings();
 
   if (isLoading || !stats) {
     return (
@@ -39,6 +40,11 @@ export default function Home() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="text-2xl font-bold font-serif">Изучить новые</div>
+            {settings && (
+              <p className="text-primary-foreground/60 text-xs">
+                Сессия #{(settings.totalSessions ?? 0) + 1} · до {settings.sessionSize} слов
+              </p>
+            )}
             <Link href="/train" className="w-full">
               <Button size="lg" className="w-full bg-background text-foreground hover:bg-background/90" data-testid="button-start-training">
                 Начать
@@ -75,7 +81,12 @@ export default function Home() {
             </CardTitle>
           </CardHeader>
           <CardContent className="flex items-center justify-between gap-4">
-            <p className="text-sm text-muted-foreground">Обводите слова по образцу — закрепляйте написание мышечной памятью</p>
+            <div>
+              <p className="text-sm text-muted-foreground">Обводите слова по образцу — закрепляйте написание мышечной памятью</p>
+              {stats && stats.totalWords > 0 && (
+                <p className="text-xs text-muted-foreground/60 mt-0.5">{stats.totalWords} слов в словаре</p>
+              )}
+            </div>
             <Link href="/trace">
               <Button variant="outline">Начать</Button>
             </Link>
@@ -92,7 +103,7 @@ export default function Home() {
                 <Target className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Сегодня</p>
+                <p className="text-sm text-muted-foreground">Верно сегодня</p>
                 <p className="text-xl font-bold">{stats.wordsLearnedToday}</p>
               </div>
             </CardContent>
@@ -115,7 +126,8 @@ export default function Home() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Точность</p>
-                <p className="text-xl font-bold">{accuracy.toFixed(1)}%</p>
+                <p className="text-xl font-bold">{accuracy >= 10 ? Math.round(accuracy) : accuracy.toFixed(1)}%</p>
+                <p className="text-[10px] text-muted-foreground/50">за всё время</p>
               </div>
             </CardContent>
           </Card>
@@ -126,7 +138,10 @@ export default function Home() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Мастерство</p>
-                <p className="text-xl font-bold">{stats.masteredWords}</p>
+                <p className="text-xl font-bold">{stats.masteredWords} <span className="text-sm font-normal text-muted-foreground">/ {stats.totalWords}</span></p>
+                {stats.totalWords > 0 && (
+                  <Progress value={(stats.masteredWords / stats.totalWords) * 100} className="h-1 mt-1 w-20" />
+                )}
               </div>
             </CardContent>
           </Card>

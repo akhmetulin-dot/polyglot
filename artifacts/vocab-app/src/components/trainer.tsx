@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Check, Lightbulb, X, ArrowRight, BookOpen, Pencil, Save } from "lucide-react";
+import { Check, Lightbulb, X, ArrowRight, BookOpen, Pencil, Save, Loader2 } from "lucide-react";
 import { 
   useSubmitAnswer, 
   useRequestHint, 
@@ -14,6 +15,10 @@ import {
   useCompleteSession,
   TrainingWord,
   useGetSettings,
+  getGetStatsQueryKey,
+  getGetSettingsQueryKey,
+  getGetTrainingSessionQueryKey,
+  getGetDueReviewsQueryKey,
 } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
 
@@ -34,6 +39,7 @@ export function Trainer({ words: initialWords, title, onFinish }: TrainerProps) 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [completedCount, setCompletedCount] = useState(0);
   const [hintsUsed, setHintsUsed] = useState(0);
+  const [wrongAnswers, setWrongAnswers] = useState(0);
   const [sessionFinished, setSessionFinished] = useState(false);
   const { data: settings } = useGetSettings();
 
@@ -44,6 +50,11 @@ export function Trainer({ words: initialWords, title, onFinish }: TrainerProps) 
   const [plState, setPlState] = useState<FieldState>('idle');
   const [deState, setDeState] = useState<FieldState>('idle');
   const [enState, setEnState] = useState<FieldState>('idle');
+
+  // Correct answers revealed after wrong submission
+  const [correctPl, setCorrectPl] = useState<string | null>(null);
+  const [correctDe, setCorrectDe] = useState<string | null>(null);
+  const [correctEn, setCorrectEn] = useState<string | null>(null);
 
   const [hintData, setHintData] = useState<{
     mnemonic?: string | null;
@@ -79,6 +90,7 @@ export function Trainer({ words: initialWords, title, onFinish }: TrainerProps) 
   const requestHint = useRequestHint();
   const updateWord = useUpdateWord();
   const completeSession = useCompleteSession();
+  const queryClient = useQueryClient();
 
   const inputRefs = {
     pl: useRef<HTMLInputElement>(null),
@@ -92,12 +104,16 @@ export function Trainer({ words: initialWords, title, onFinish }: TrainerProps) 
       setCurrentIndex(0);
       setCompletedCount(0);
       setHintsUsed(0);
+      setWrongAnswers(0);
       setSessionFinished(false);
       resetWordState();
     }
   }, [initialWords]);
 
+  const resetCorrectAnswers = () => { setCorrectPl(null); setCorrectDe(null); setCorrectEn(null); };
+
   const resetWordState = () => {
+    resetCorrectAnswers();
     setPl("");
     setDe("");
     setEn("");
@@ -167,7 +183,15 @@ export function Trainer({ words: initialWords, title, onFinish }: TrainerProps) 
         setDeState(result.germanCorrect ? 'correct' : 'wrong');
         setEnState(result.englishCorrect ? 'correct' : 'wrong');
 
+        if (!result.allCorrect) {
+          // Reveal correct answers for wrong fields
+          if (!result.polishCorrect && result.word?.polish) setCorrectPl(result.word.polish);
+          if (!result.germanCorrect && result.word?.german) setCorrectDe(result.word.german);
+          if (!result.englishCorrect && result.word?.english) setCorrectEn(result.word.english);
+        }
+
         if (result.allCorrect) {
+          queryClient.invalidateQueries({ queryKey: getGetStatsQueryKey() });
           setIsSuccessShake(true);
           setCompletedCount(prev => prev + 1);
           // Brief success shake, then show reinforcement tracing
@@ -185,6 +209,7 @@ export function Trainer({ words: initialWords, title, onFinish }: TrainerProps) 
             setTracingFlash(false);
           }, 700);
         } else {
+          setWrongAnswers(prev => prev + 1);
           setShowNext(true);
           // Re-queue logic
           const errorRepeatAfter = settings?.errorRepeatAfter || 3;
@@ -201,7 +226,14 @@ export function Trainer({ words: initialWords, title, onFinish }: TrainerProps) 
     setTracingWord(null);
     if (currentIndex + 1 >= queue.length) {
       // Session done — increment global session counter for SRS
-      completeSession.mutate();
+      completeSession.mutate(undefined, {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getGetStatsQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getGetSettingsQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getGetTrainingSessionQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getGetDueReviewsQueryKey() });
+        }
+      });
       setSessionFinished(true);
       if (onFinish) onFinish();
     } else {
@@ -265,15 +297,29 @@ export function Trainer({ words: initialWords, title, onFinish }: TrainerProps) 
             <span className="font-bold text-2xl">{completedCount}</span>
             <span className="text-sm text-muted-foreground uppercase tracking-wider font-semibold">Слов</span>
           </div>
+          {wrongAnswers > 0 && (
+            <>
+              <div className="w-px h-10 bg-border"></div>
+              <div className="flex flex-col items-center text-destructive">
+                <span className="font-bold text-2xl">{wrongAnswers}</span>
+                <span className="text-sm uppercase tracking-wider font-semibold">Ошибок</span>
+              </div>
+            </>
+          )}
           <div className="w-px h-10 bg-border"></div>
           <div className="flex flex-col items-center text-muted-foreground">
             <span className="font-bold text-2xl">{hintsUsed}</span>
             <span className="text-sm uppercase tracking-wider font-semibold">Подсказок</span>
           </div>
         </div>
-        <Link href="/">
-          <Button size="lg" className="mt-4">На главную</Button>
-        </Link>
+        <div className="flex gap-3 mt-4">
+          <Link href="/trace">
+            <Button size="lg" variant="outline">✏️ Прописи</Button>
+          </Link>
+          <Link href="/">
+            <Button size="lg">На главную</Button>
+          </Link>
+        </div>
       </div>
     );
   }
@@ -386,6 +432,7 @@ export function Trainer({ words: initialWords, title, onFinish }: TrainerProps) 
         <h1 className="text-xl font-serif text-muted-foreground">{title}</h1>
         <div className="flex items-center gap-4 text-sm font-semibold bg-secondary/50 px-4 py-2 rounded-full">
           <span className="text-primary flex items-center gap-1"><Check className="h-4 w-4" /> {completedCount} / {totalOriginalWords}</span>
+          {wrongAnswers > 0 && <span className="text-destructive flex items-center gap-1"><X className="h-4 w-4" /> {wrongAnswers}</span>}
           <span className="text-muted-foreground flex items-center gap-1"><Lightbulb className="h-4 w-4" /> {hintsUsed}</span>
         </div>
       </div>
@@ -486,6 +533,11 @@ export function Trainer({ words: initialWords, title, onFinish }: TrainerProps) 
                 plState === 'wrong' && "border-red-500 bg-red-50/50 text-red-700 dark:bg-red-950/20 dark:text-red-400 shake focus-visible:ring-red-500"
               )}
             />
+            {plState === 'wrong' && correctPl && (
+              <p className="text-xs text-green-700 dark:text-green-400 font-mono pl-1 animate-in fade-in slide-in-from-top-1">
+                ✓ {correctPl}
+              </p>
+            )}
           </div>
 
           {/* DE field */}
@@ -518,6 +570,11 @@ export function Trainer({ words: initialWords, title, onFinish }: TrainerProps) 
                 deState === 'wrong' && "border-red-500 bg-red-50/50 text-red-700 dark:bg-red-950/20 dark:text-red-400 shake focus-visible:ring-red-500"
               )}
             />
+            {deState === 'wrong' && correctDe && (
+              <p className="text-xs text-green-700 dark:text-green-400 font-mono pl-1 animate-in fade-in slide-in-from-top-1">
+                ✓ {correctDe}
+              </p>
+            )}
           </div>
 
           {/* EN field */}
@@ -550,6 +607,11 @@ export function Trainer({ words: initialWords, title, onFinish }: TrainerProps) 
                 enState === 'wrong' && "border-red-500 bg-red-50/50 text-red-700 dark:bg-red-950/20 dark:text-red-400 shake focus-visible:ring-red-500"
               )}
             />
+            {enState === 'wrong' && correctEn && (
+              <p className="text-xs text-green-700 dark:text-green-400 font-mono pl-1 animate-in fade-in slide-in-from-top-1">
+                ✓ {correctEn}
+              </p>
+            )}
           </div>
 
         </div>
@@ -570,19 +632,19 @@ export function Trainer({ words: initialWords, title, onFinish }: TrainerProps) 
                 size="lg" 
                 className="w-full h-14 text-lg" 
                 onClick={handleCheck}
-                disabled={isSuccessShake || (!pl && !de && !en)}
+                disabled={isSuccessShake || submitAnswer.isPending || (!pl && !de && !en)}
               >
-                Проверить
+                {submitAnswer.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : "Проверить"}
               </Button>
               <Button 
                 variant="outline" 
                 size="lg" 
-                className={cn("w-full h-14", hintData ? "border-primary/50 text-primary" : "text-muted-foreground")}
+                className={cn("w-full h-14", hintData ? "border-primary/50 text-primary bg-primary/5" : "text-muted-foreground")}
                 onClick={handleHint}
-                disabled={isSuccessShake || hintData !== null}
+                disabled={isSuccessShake || submitAnswer.isPending || hintData !== null}
               >
                 <Lightbulb className="mr-2 h-5 w-5" />
-                Подсказка
+                {hintData ? "Подсказка активна" : "Подсказка"}
               </Button>
             </>
           )}

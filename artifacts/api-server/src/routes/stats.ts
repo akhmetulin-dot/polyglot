@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { sql, isNotNull } from "drizzle-orm";
-import { db, wordsTable, settingsTable } from "@workspace/db";
+import { sql } from "drizzle-orm";
+import { db, wordsTable, settingsTable, wordEventsTable } from "@workspace/db";
 import { GetStatsResponse } from "@workspace/api-zod";
 
 const router: IRouter = Router();
@@ -24,9 +24,15 @@ router.get("/stats", async (_req, res): Promise<void> => {
       dueForReview: sql<number>`count(*) filter (where ${wordsTable.nextReviewSession} is not null and ${wordsTable.nextReviewSession} <= ${totalSessions})::int`,
       totalCorrect: sql<number>`coalesce(sum(${wordsTable.correctCount}), 0)::int`,
       totalHints: sql<number>`coalesce(sum(${wordsTable.hintCount}), 0)::int`,
-      wordsLearnedToday: sql<number>`count(*) filter (where ${wordsTable.createdAt} >= ${todayStart})::int`,
     })
     .from(wordsTable);
+
+  // Words practiced today = distinct wordIds in word_events with a correct/review_correct event today
+  const [practicedToday] = await db
+    .select({ count: sql<number>`count(distinct ${wordEventsTable.wordId})::int` })
+    .from(wordEventsTable)
+    .where(sql`${wordEventsTable.createdAt} >= ${todayStart} and ${wordEventsTable.eventType} in ('correct', 'review_correct')`);
+  const wordsLearnedToday = practicedToday?.count ?? 0;
 
   const totalAttempts = (totals.totalCorrect ?? 0) + (totals.totalHints ?? 0);
   const accuracyPercent = totalAttempts > 0
@@ -41,7 +47,7 @@ router.get("/stats", async (_req, res): Promise<void> => {
       totalCorrect: totals.totalCorrect ?? 0,
       totalHints: totals.totalHints ?? 0,
       accuracyPercent,
-      wordsLearnedToday: totals.wordsLearnedToday ?? 0,
+      wordsLearnedToday,
     }),
   );
 });

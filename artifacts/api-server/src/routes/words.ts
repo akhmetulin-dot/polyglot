@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, ilike, or, asc, desc, isNull, isNotNull } from "drizzle-orm";
+import { eq, ilike, or, and, asc, desc, isNull, isNotNull, sql } from "drizzle-orm";
 import { db, wordsTable, wordEventsTable } from "@workspace/db";
 import {
   ListWordsQueryParams,
@@ -26,24 +26,33 @@ router.get("/words", async (req, res): Promise<void> => {
     return;
   }
 
-  const { search, sortBy, limit = 50, offset = 0 } = parsed.data;
+  const { search, sortBy, limit = 200, offset = 0 } = parsed.data;
 
-  let query = db
-    .select()
-    .from(wordsTable)
-    .where(isNull(wordsTable.deletedAt))
-    .$dynamic();
-
-  if (search) {
-    query = query.where(
-      or(
+  // Build base filter
+  const baseWhere = isNull(wordsTable.deletedAt);
+  const searchWhere = search
+    ? or(
         ilike(wordsTable.russian, `%${search}%`),
         ilike(wordsTable.polish, `%${search}%`),
         ilike(wordsTable.german, `%${search}%`),
         ilike(wordsTable.english, `%${search}%`),
-      ),
-    );
-  }
+      )
+    : undefined;
+  const combinedWhere = search && searchWhere
+    ? and(baseWhere, searchWhere)
+    : baseWhere;
+
+  // Real total count (ignoring limit/offset)
+  const [{ total }] = await db
+    .select({ total: sql<number>`count(*)::int` })
+    .from(wordsTable)
+    .where(combinedWhere);
+
+  let query = db
+    .select()
+    .from(wordsTable)
+    .where(combinedWhere)
+    .$dynamic();
 
   if (sortBy === "russian") {
     query = query.orderBy(asc(wordsTable.russian));
@@ -54,7 +63,7 @@ router.get("/words", async (req, res): Promise<void> => {
   }
 
   const words = await query.limit(limit).offset(offset);
-  res.json(ListWordsResponse.parse({ words, total: words.length }));
+  res.json(ListWordsResponse.parse({ words, total: total ?? 0 }));
 });
 
 // ─── Trash (soft-deleted words) ──────────────────────────────────────────────

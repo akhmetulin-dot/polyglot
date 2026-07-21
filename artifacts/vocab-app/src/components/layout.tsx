@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { BookOpen, Settings, List, Home, Menu, X, PenLine } from "lucide-react";
+import { BookOpen, Settings, List, Home, Menu, PenLine, Sun, Moon } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { useTheme } from "@/hooks/use-theme";
 
 const navItems = [
   { href: "/", label: "Главная", icon: Home },
@@ -41,6 +42,7 @@ function NavLinks({ onClose }: { onClose?: () => void }) {
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
+  const { dark, toggle } = useTheme();
 
   return (
     <div className="flex min-h-[100dvh] flex-col bg-background text-foreground md:pl-64">
@@ -54,22 +56,27 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <span className="font-serif font-bold text-lg tracking-tight text-primary">Полиглот</span>
         </div>
 
-        <Sheet open={open} onOpenChange={setOpen}>
-          <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-9 w-9">
-              <Menu className="h-5 w-5" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="left" className="w-64 p-6 flex flex-col gap-2">
-            <div className="flex items-center gap-2 mb-6">
-              <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground">
-                <BookOpen className="h-5 w-5" />
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" className="h-9 w-9" onClick={toggle} title={dark ? "Светлая тема" : "Тёмная тема"}>
+            {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </Button>
+          <Sheet open={open} onOpenChange={setOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-9 w-9">
+                <Menu className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-64 p-6 flex flex-col gap-2">
+              <div className="flex items-center gap-2 mb-6">
+                <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground">
+                  <BookOpen className="h-5 w-5" />
+                </div>
+                <span className="font-serif font-bold text-xl tracking-tight text-primary">Полиглот</span>
               </div>
-              <span className="font-serif font-bold text-xl tracking-tight text-primary">Полиглот</span>
-            </div>
-            <NavLinks onClose={() => setOpen(false)} />
-          </SheetContent>
-        </Sheet>
+              <NavLinks onClose={() => setOpen(false)} />
+            </SheetContent>
+          </Sheet>
+        </div>
       </header>
 
       {/* ── Desktop sidebar ── */}
@@ -80,9 +87,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </div>
           <span className="font-serif font-bold text-xl tracking-tight text-primary">Полиглот</span>
         </div>
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 flex-1">
           <NavLinks />
         </div>
+        <Button variant="ghost" size="sm" className="w-full justify-start gap-3 text-muted-foreground" onClick={toggle}>
+          {dark ? <Sun className="h-5 w-5 shrink-0" /> : <Moon className="h-5 w-5 shrink-0" />}
+          <span className="text-sm">{dark ? "Светлая тема" : "Тёмная тема"}</span>
+        </Button>
       </nav>
 
       {/* ── Content ── */}
