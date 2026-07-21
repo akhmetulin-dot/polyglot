@@ -348,7 +348,8 @@ export default function Settings() {
         </CardContent>
       </Card>
 
-      <div className="flex gap-3">
+      {/* Sticky save bar — always visible above keyboard/bottom edge */}
+      <div className="sticky bottom-0 bg-background/95 backdrop-blur-sm border-t pt-3 pb-4 -mx-4 px-4 flex gap-3">
         <Button
           variant="outline"
           className="flex-1"

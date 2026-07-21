@@ -563,7 +563,7 @@ export default function Words() {
                     {word.english && <span className="text-sm text-muted-foreground"> — {word.english}</span>}
                   </p>
                   {word.mnemonic && (
-                    <p className="text-xs text-primary/60 italic truncate">{word.mnemonic}</p>
+                    <p className="text-xs text-primary/60 italic leading-relaxed">{word.mnemonic}</p>
                   )}
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
@@ -583,7 +583,7 @@ export default function Words() {
 
       {/* Add / Edit word dialog */}
       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-        <DialogContent className="w-[95vw] max-w-md max-h-[92svh] overflow-y-auto overscroll-y-contain p-5 top-[2svh] translate-y-0 sm:top-[50%] sm:translate-y-[-50%]">
+        <DialogContent className="w-[95vw] max-w-md max-h-[92dvh] overflow-y-auto overscroll-y-contain p-5 top-[2dvh] translate-y-0 sm:top-[50%] sm:translate-y-[-50%]">
           <DialogHeader>
             <DialogTitle>{editingWord ? "Редактировать слово" : "Новое слово"}</DialogTitle>
           </DialogHeader>
@@ -602,6 +602,7 @@ export default function Words() {
                   autoCapitalize="none"
                   spellCheck={false}
                   autoFocus
+                  onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: "smooth", block: "center" }), 350)}
                 />
                 <Button
                   type="button"
@@ -628,6 +629,7 @@ export default function Words() {
                   onChange={e => setFormData({ ...formData, polish: e.target.value })}
                   lang="pl"
                   autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck={false}
+                  onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: "smooth", block: "center" }), 350)}
                 />
               </div>
               <div className="space-y-1.5">
@@ -637,6 +639,7 @@ export default function Words() {
                   onChange={e => setFormData({ ...formData, german: e.target.value })}
                   lang="de"
                   autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck={false}
+                  onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: "smooth", block: "center" }), 350)}
                 />
               </div>
               <div className="space-y-1.5">
@@ -646,6 +649,7 @@ export default function Words() {
                   onChange={e => setFormData({ ...formData, english: e.target.value })}
                   lang="en"
                   autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck={false}
+                  onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: "smooth", block: "center" }), 350)}
                 />
               </div>
             </div>
@@ -661,6 +665,7 @@ export default function Words() {
                 autoComplete="off"
                 autoCorrect="off"
                 spellCheck={false}
+                onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: "smooth", block: "center" }), 350)}
               />
               <p className="text-[11px] text-muted-foreground">Только вы пишете подсказку — она появится при нажатии кнопки «Подсказка» в тренажёре.</p>
             </div>
@@ -674,6 +679,7 @@ export default function Words() {
                   onChange={e => setFormData({ ...formData, frequencyRank: e.target.value })} 
                   placeholder="Например: 150"
                   autoComplete="off"
+                  onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: "smooth", block: "center" }), 350)}
                 />
               </div>
               <div className="space-y-1.5">
@@ -701,6 +707,7 @@ export default function Words() {
                 autoComplete="off"
                 autoCorrect="off"
                 spellCheck={false}
+                onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: "smooth", block: "center" }), 350)}
               />
               <p className="text-[11px] text-muted-foreground">Метка для группировки синонимов и похожих по смыслу слов. Видна в списке рядом со словом.</p>
             </div>

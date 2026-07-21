@@ -148,8 +148,8 @@ export function TraceTrainer({
 
       <Progress value={progressPercent} className="h-1" />
 
-      {/* Reference card — single line, no horizontal overflow */}
-      <div className="py-3 px-4 border rounded-xl bg-muted/30">
+      {/* Reference card — Russian bold + all translations, mnemonic fully shown */}
+      <div className="py-2.5 px-3 border rounded-xl bg-muted/30">
         <p className="overflow-hidden whitespace-nowrap overflow-ellipsis leading-snug">
           <span className="font-bold font-serif text-xl">{current.russian}</span>
           {hasPl && <span className="text-muted-foreground text-sm"> — {current.polish}</span>}
@@ -157,35 +157,23 @@ export function TraceTrainer({
           {hasEn && <span className="text-muted-foreground text-sm"> — {current.english}</span>}
         </p>
         {current.mnemonic && (
-          <p className="text-xs text-primary/50 italic mt-1 truncate">{current.mnemonic}</p>
+          <p className="text-xs text-primary/50 italic mt-1 leading-relaxed">{current.mnemonic}</p>
         )}
       </div>
 
-      {/* Trace rows */}
-      <div className="space-y-2">
+      {/* Trace rows — no Russian repeat, no numbers, minimal chrome, full width inputs */}
+      <div className="space-y-1.5">
         {rows.map((row, i) => (
           <div
             key={i}
             className={cn(
-              "grid gap-2 items-center p-2.5 rounded-xl border transition-all duration-300",
-              hasPl && haDe && hasEn ? "grid-cols-[52px_1fr_1fr_1fr_16px]" :
-              (hasPl && haDe) || (hasPl && hasEn) || (haDe && hasEn) ? "grid-cols-[52px_1fr_1fr_16px]" :
-              "grid-cols-[52px_1fr_16px]",
-              row.done && !row.flash && "border-green-400/40 bg-green-50/20 dark:bg-green-950/10",
-              row.flash && "success-pulse border-green-500",
-              !row.done && !rows.slice(0, i).every(r => r.done) && "opacity-50",
-              !row.done && rows.slice(0, i).every(r => r.done) && "bg-card border-primary/30 shadow-sm",
-              !row.done && i === 0 && "bg-card border-primary/30 shadow-sm",
+              "grid gap-1.5 items-center transition-all duration-300",
+              hasPl && haDe && hasEn ? "grid-cols-3" :
+              (hasPl && haDe) || (hasPl && hasEn) || (haDe && hasEn) ? "grid-cols-2" :
+              "grid-cols-1",
+              row.flash && "success-pulse",
             )}
           >
-            {/* Russian — fixed width, truncate */}
-            <span className={cn(
-              "font-bold font-serif text-sm w-[52px] truncate",
-              row.done ? "text-green-600 dark:text-green-400" : "text-foreground"
-            )}>
-              {current.russian}
-            </span>
-
             {hasPl && (
               <Input
                 id={`trace-input-${i}-pl`}
@@ -197,7 +185,11 @@ export function TraceTrainer({
                 disabled={row.done}
                 lang="pl"
                 autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck={false}
-                className={cn("h-8 text-sm min-w-0", row.done && "border-green-400/60 text-green-700 dark:text-green-400")}
+                className={cn(
+                  "h-9 text-sm min-w-0 transition-colors",
+                  row.done && "border-green-400/50 bg-green-50/30 dark:bg-green-950/10 text-green-700 dark:text-green-400",
+                  !row.done && !rows.slice(0, i).every(r => r.done) && "opacity-40",
+                )}
               />
             )}
             {haDe && (
@@ -211,7 +203,11 @@ export function TraceTrainer({
                 disabled={row.done}
                 lang="de"
                 autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck={false}
-                className={cn("h-8 text-sm min-w-0", row.done && "border-green-400/60 text-green-700 dark:text-green-400")}
+                className={cn(
+                  "h-9 text-sm min-w-0 transition-colors",
+                  row.done && "border-green-400/50 bg-green-50/30 dark:bg-green-950/10 text-green-700 dark:text-green-400",
+                  !row.done && !rows.slice(0, i).every(r => r.done) && "opacity-40",
+                )}
               />
             )}
             {hasEn && (
@@ -225,14 +221,13 @@ export function TraceTrainer({
                 disabled={row.done}
                 lang="en"
                 autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck={false}
-                className={cn("h-8 text-sm min-w-0", row.done && "border-green-400/60 text-green-700 dark:text-green-400")}
+                className={cn(
+                  "h-9 text-sm min-w-0 transition-colors",
+                  row.done && "border-green-400/50 bg-green-50/30 dark:bg-green-950/10 text-green-700 dark:text-green-400",
+                  !row.done && !rows.slice(0, i).every(r => r.done) && "opacity-40",
+                )}
               />
             )}
-
-            {row.done
-              ? <Check className="h-4 w-4 text-green-500 shrink-0" />
-              : <span className="text-center text-[10px] text-muted-foreground/40 font-mono select-none">{i + 1}</span>
-            }
           </div>
         ))}
       </div>
