@@ -1,5 +1,5 @@
 // Service Worker — Полиглот PWA
-const CACHE = "polyglot-v1";
+const CACHE = "polyglot-v2";
 const OFFLINE_URLS = ["/", "/index.html"];
 
 self.addEventListener("install", (e) => {
@@ -13,11 +13,25 @@ self.addEventListener("install", (e) => {
 
 self.addEventListener("activate", (e) => {
   e.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
-    )
+    caches.keys().then(async (keys) => {
+      const oldKeys = keys.filter((k) => k !== CACHE);
+      const isUpdate = oldKeys.length > 0;
+
+      // Delete old caches
+      await Promise.all(oldKeys.map((k) => caches.delete(k)));
+
+      // Take control of all open tabs
+      await self.clients.claim();
+
+      // If this is an update (not first install), tell all clients
+      if (isUpdate) {
+        const clients = await self.clients.matchAll({ type: "window" });
+        clients.forEach((client) =>
+          client.postMessage({ type: "UPDATE_AVAILABLE" })
+        );
+      }
+    })
   );
-  self.clients.claim();
 });
 
 self.addEventListener("fetch", (e) => {
@@ -37,7 +51,7 @@ self.addEventListener("fetch", (e) => {
           return res;
         })
         .catch(() => cached);
-      // Return cached first for speed, fall back to network
+      // Return cached first for speed; network updates cache in background
       return cached || network;
     })
   );

@@ -5,6 +5,7 @@ import { BookOpen, Settings, List, Home, Menu, PenLine, Sun, Moon } from "lucide
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/hooks/use-theme";
+import { UpdateBanner } from "@/components/update-banner";
 
 const navItems = [
   { href: "/", label: "Главная", icon: Home },
@@ -46,6 +47,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-[100dvh] flex-col bg-background text-foreground md:pl-64">
+      <UpdateBanner />
 
       {/* ── Mobile top bar ── */}
       <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between h-14 px-4 border-b bg-card/90 backdrop-blur-md md:hidden">
