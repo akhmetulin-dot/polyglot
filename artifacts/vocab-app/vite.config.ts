@@ -45,7 +45,9 @@ export default defineConfig({
   },
   root: path.resolve(import.meta.dirname),
   build: {
-    outDir: path.resolve(import.meta.dirname, 'dist'),
+    // Output to the monorepo root dist/ so Vercel finds it at the default location.
+    // In Replit we only run `vite dev`, not `vite build`, so this path is fine.
+    outDir: path.resolve(import.meta.dirname, '..', '..', 'dist'),
     emptyOutDir: true,
   },
   server: {
