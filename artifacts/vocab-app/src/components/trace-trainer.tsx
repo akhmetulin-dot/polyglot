@@ -117,13 +117,13 @@ export function TraceTrainer({
   );
   const [completedWords, setCompletedWords] = useState(0);
   const [finished, setFinished]             = useState(false);
-  const firstInputRef   = useRef<HTMLInputElement>(null);
-  const isLandscape     = useIsLandscape();
+  const firstInputRef      = useRef<HTMLInputElement>(null);
+  const isLandscape        = useIsLandscape();
 
   // ── iOS-safe focus: set this ref to the target element id, then it's
   //    applied synchronously in the useEffect that runs after every render.
   //    useEffect is within the React commit phase — iOS keeps the keyboard up.
-  const pendingFocusId  = useRef<string | null>(null);
+  const pendingFocusId     = useRef<string | null>(null);
   const focusFirstOnRender = useRef(false);
 
   // Apply pending focus after every render (iOS-safe: runs in commit phase)
@@ -147,6 +147,23 @@ export function TraceTrainer({
     setRows(Array.from({ length: repetitions }, () => ({ pl: "", de: "", en: "", done: false, flash: false })));
     focusFirstOnRender.current = true;
   }, [wordIndex, repetitions]);
+
+  // ── Advance to next word when ALL rows are done ──────────────────────────
+  // This runs in the React commit phase (no setTimeout) → iOS keeps keyboard up.
+  useEffect(() => {
+    if (finished) return;
+    if (rows.length === 0 || !rows.every(r => r.done)) return;
+    const next = wordIndex + 1;
+    setCompletedWords(c => c + 1);
+    if (next >= words.length) {
+      setFinished(true);
+      onFinish?.();
+    } else {
+      setWordIndex(next);
+      // focusFirstOnRender is set by the wordIndex useEffect above
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows]);
 
   const norm = (s: string) => s.trim().toLowerCase();
 
@@ -187,23 +204,10 @@ export function TraceTrainer({
         // else: all rows done → word advance handled below via setTimeout
         // (only the advance is delayed, not the focus — focusFirstOnRender handles that)
 
-        // Clear flash after animation; advance word if all done
+        // Clear flash after animation (visual only — word advance is handled
+        // by the rows useEffect, synchronously in the commit phase)
         setTimeout(() => {
           setRows(r => r.map((x, i) => i === rowIndex ? { ...x, flash: false } : x));
-          setRows(r => {
-            if (r.every(x => x.done)) {
-              const nextWord = wordIndex + 1;
-              setCompletedWords(c => c + 1);
-              if (nextWord >= words.length) {
-                setFinished(true);
-                onFinish?.();
-              } else {
-                setWordIndex(nextWord);
-                // focusFirstOnRender is set inside the wordIndex useEffect
-              }
-            }
-            return r;
-          });
         }, 400);
 
       } else if (isCurrentCorrect) {
