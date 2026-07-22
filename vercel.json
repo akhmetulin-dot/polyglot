@@ -1,0 +1,8 @@
+{
+  "buildCommand": "pnpm --filter @workspace/vocab-app run build",
+  "outputDirectory": "artifacts/vocab-app/dist",
+  "installCommand": "pnpm install --frozen-lockfile",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
