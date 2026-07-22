@@ -452,7 +452,7 @@ export function Trainer({ words: initialWords, title, onFinish }: TrainerProps) 
         </div>
 
         {hintData && (
-          <div className="mb-8 p-4 bg-primary/5 rounded-xl border border-primary/10 animate-in fade-in slide-in-from-top-4 space-y-3">
+          <div className="mb-8 p-4 bg-muted rounded-xl border border-border animate-in fade-in slide-in-from-top-4 space-y-3">
             {/* Mnemonic — inline editable */}
             <div className="group">
               {isEditingMnemonic ? (
@@ -488,9 +488,9 @@ export function Trainer({ words: initialWords, title, onFinish }: TrainerProps) 
                   onClick={handleStartEditMnemonic}
                   title="Нажмите чтобы изменить подсказку"
                 >
-                  <p className="text-sm text-primary flex-1 font-medium italic">
+                  <p className="text-sm text-foreground flex-1 font-semibold italic">
                     {hintData.mnemonic ? `"${hintData.mnemonic}"` : (
-                      <span className="text-muted-foreground not-italic">Нет подсказки — нажмите чтобы добавить</span>
+                      <span className="text-muted-foreground not-italic font-normal">Нет подсказки — нажмите чтобы добавить</span>
                     )}
                   </p>
                   <Pencil className="h-3.5 w-3.5 text-primary/40 group-hover:text-primary/70 shrink-0 mt-0.5 transition-colors" />
@@ -508,7 +508,7 @@ export function Trainer({ words: initialWords, title, onFinish }: TrainerProps) 
             <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 ml-1">
               <Label htmlFor="pl" className="text-xs uppercase text-muted-foreground font-bold tracking-wider">🇵🇱 PL</Label>
               {hintData && focusedField === 'pl' && hintData.mnemonic && (
-                <span className="text-xs text-primary/70 animate-in fade-in duration-150 normal-case tracking-normal italic">
+                <span className="text-xs text-foreground/75 animate-in fade-in duration-150 normal-case tracking-normal italic">
                   {hintData.mnemonic}
                 </span>
               )}
@@ -528,7 +528,7 @@ export function Trainer({ words: initialWords, title, onFinish }: TrainerProps) 
               autoCapitalize="none"
               spellCheck={false}
               className={cn(
-                "text-lg h-14 bg-card",
+                "text-lg h-14 bg-card placeholder:text-foreground/60",
                 plState === 'correct' && "border-green-500 bg-green-50/50 text-green-700 dark:bg-green-950/20 dark:text-green-400 focus-visible:ring-green-500",
                 plState === 'wrong' && "border-red-500 bg-red-50/50 text-red-700 dark:bg-red-950/20 dark:text-red-400 shake focus-visible:ring-red-500"
               )}
@@ -545,7 +545,7 @@ export function Trainer({ words: initialWords, title, onFinish }: TrainerProps) 
             <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 ml-1">
               <Label htmlFor="de" className="text-xs uppercase text-muted-foreground font-bold tracking-wider">🇩🇪 DE</Label>
               {hintData && focusedField === 'de' && hintData.mnemonic && (
-                <span className="text-xs text-primary/70 animate-in fade-in duration-150 normal-case tracking-normal italic">
+                <span className="text-xs text-foreground/75 animate-in fade-in duration-150 normal-case tracking-normal italic">
                   {hintData.mnemonic}
                 </span>
               )}
@@ -565,7 +565,7 @@ export function Trainer({ words: initialWords, title, onFinish }: TrainerProps) 
               autoCapitalize="none"
               spellCheck={false}
               className={cn(
-                "text-lg h-14 bg-card",
+                "text-lg h-14 bg-card placeholder:text-foreground/60",
                 deState === 'correct' && "border-green-500 bg-green-50/50 text-green-700 dark:bg-green-950/20 dark:text-green-400 focus-visible:ring-green-500",
                 deState === 'wrong' && "border-red-500 bg-red-50/50 text-red-700 dark:bg-red-950/20 dark:text-red-400 shake focus-visible:ring-red-500"
               )}
@@ -582,7 +582,7 @@ export function Trainer({ words: initialWords, title, onFinish }: TrainerProps) 
             <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 ml-1">
               <Label htmlFor="en" className="text-xs uppercase text-muted-foreground font-bold tracking-wider">🇬🇧 EN</Label>
               {hintData && focusedField === 'en' && hintData.mnemonic && (
-                <span className="text-xs text-primary/70 animate-in fade-in duration-150 normal-case tracking-normal italic">
+                <span className="text-xs text-foreground/75 animate-in fade-in duration-150 normal-case tracking-normal italic">
                   {hintData.mnemonic}
                 </span>
               )}
@@ -602,7 +602,7 @@ export function Trainer({ words: initialWords, title, onFinish }: TrainerProps) 
               autoCapitalize="none"
               spellCheck={false}
               className={cn(
-                "text-lg h-14 bg-card",
+                "text-lg h-14 bg-card placeholder:text-foreground/60",
                 enState === 'correct' && "border-green-500 bg-green-50/50 text-green-700 dark:bg-green-950/20 dark:text-green-400 focus-visible:ring-green-500",
                 enState === 'wrong' && "border-red-500 bg-red-50/50 text-red-700 dark:bg-red-950/20 dark:text-red-400 shake focus-visible:ring-red-500"
               )}
