@@ -1,110 +1,185 @@
-import { useState } from "react";
-import { Link, useLocation } from "wouter";
+import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { BookOpen, Settings, List, Home, Menu, PenLine, Sun, Moon } from "lucide-react";
-import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
+import { BookOpen, Settings, List, Home, PenLine, Sun, Moon } from "lucide-react";
 import { useTheme } from "@/hooks/use-theme";
 import { UpdateBanner } from "@/components/update-banner";
 import { useGetSettings } from "@workspace/api-client-react";
 
-const navItems = [
-  { href: "/", label: "Главная", icon: Home },
-  { href: "/words", label: "Словарь", icon: List },
-  { href: "/trace", label: "Прописи", icon: PenLine },
+// ── Nav items ────────────────────────────────────────────────────────────────
+const NAV_ITEMS = [
+  { href: "/",         label: "Главная",   icon: Home     },
+  { href: "/words",    label: "Словарь",   icon: List     },
+  { href: "/trace",    label: "Прописи",   icon: PenLine  },
   { href: "/settings", label: "Настройки", icon: Settings },
 ];
 
-function NavLinks({ onClose }: { onClose?: () => void }) {
-  const [location] = useLocation();
+// Arc angles (degrees): 90°=up, 180°=left — goes toward screen center
+const ANGLES = [90, 120, 150, 180];
+const FAB_R  = 28; // FAB radius px  (56px diameter)
+const ITEM_R = 24; // item radius px (48px diameter)
+const ARC_R  = 92; // orbit radius px
+
+// ── App icon with fallback ────────────────────────────────────────────────────
+function AppIcon({ url, name, className }: { url: string; name: string; className?: string }) {
+  const [err, setErr] = useState(false);
+  useEffect(() => setErr(false), [url]);
+  if (!err) {
+    return (
+      <img
+        src={url}
+        alt={name}
+        className={cn("h-full w-full object-cover rounded-full", className)}
+        onError={() => setErr(true)}
+      />
+    );
+  }
+  return <BookOpen className="h-6 w-6" />;
+}
+
+// ── Radial wheel menu ─────────────────────────────────────────────────────────
+function RadialMenu({ appName }: { appName: string }) {
+  const [open, setOpen]     = useState(false);
+  const [location, navigate] = useLocation();
+  const { dark, toggle }    = useTheme();
+
+  const go = (href: string) => {
+    navigate(href);
+    setOpen(false);
+  };
+
+  const offset = FAB_R - ITEM_R; // 4px — centers item circle on FAB circle
+
   return (
     <>
-      {navItems.map((item) => {
-        const isActive = location === item.href;
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            onClick={onClose}
-            className={cn(
-              "flex items-center gap-3 rounded-lg px-4 py-3 transition-colors",
-              isActive
-                ? "text-primary bg-primary/10 font-semibold"
-                : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
-            )}
-          >
-            <item.icon className="h-5 w-5 shrink-0" />
-            <span className="text-sm">{item.label}</span>
-          </Link>
-        );
-      })}
+      {/* Tap-outside backdrop */}
+      {open && (
+        <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+      )}
+
+      {/* Wheel wrapper — anchored at bottom-right */}
+      <div
+        style={{
+          position: "fixed",
+          bottom: 24,
+          right: 24,
+          width:  FAB_R * 2,
+          height: FAB_R * 2,
+          zIndex: 50,
+        }}
+      >
+        {/* ── Arc nav items ── */}
+        {NAV_ITEMS.map((item, i) => {
+          const rad    = (ANGLES[i] * Math.PI) / 180;
+          const tx     = Math.round(Math.cos(rad) * ARC_R);   // negative = left
+          const ty     = Math.round(-Math.sin(rad) * ARC_R);  // negative = up
+          const active = location === item.href;
+
+          return (
+            <div
+              key={item.href}
+              style={{
+                position: "absolute",
+                right:    offset,
+                bottom:   offset,
+                transform: open
+                  ? `translate(${tx}px, ${ty}px) scale(1)`
+                  : "translate(0,0) scale(0.3)",
+                opacity:      open ? 1 : 0,
+                pointerEvents: open ? "auto" : "none",
+                transition: open
+                  ? `transform ${200 + i * 45}ms cubic-bezier(0.34,1.56,0.64,1), opacity 160ms ${i * 30}ms`
+                  : `transform 140ms ease-in, opacity 100ms`,
+              }}
+            >
+              {/* Label — appears to the LEFT of each button */}
+              <span
+                style={{
+                  position:  "absolute",
+                  right:     ITEM_R * 2 + 8,
+                  top:       "50%",
+                  transform: "translateY(-50%)",
+                  transition: `opacity ${open ? 200 + i * 45 + 80 : 80}ms`,
+                  opacity:   open ? 1 : 0,
+                }}
+                className={cn(
+                  "whitespace-nowrap text-xs font-semibold rounded-full px-2.5 py-0.5 shadow-sm select-none",
+                  active
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-card/95 text-foreground border border-border backdrop-blur-sm"
+                )}
+              >
+                {item.label}
+              </span>
+
+              {/* Icon button */}
+              <button
+                onClick={() => go(item.href)}
+                style={{ width: ITEM_R * 2, height: ITEM_R * 2 }}
+                className={cn(
+                  "rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-90",
+                  active
+                    ? "bg-primary text-primary-foreground ring-2 ring-primary/30 ring-offset-1 ring-offset-background"
+                    : "bg-card text-muted-foreground border border-border"
+                )}
+              >
+                <item.icon className="h-5 w-5" />
+              </button>
+            </div>
+          );
+        })}
+
+        {/* ── Main FAB — app icon ── */}
+        <button
+          onClick={() => setOpen(o => !o)}
+          aria-label="Меню"
+          style={{ width: FAB_R * 2, height: FAB_R * 2 }}
+          className={cn(
+            "relative rounded-full flex items-center justify-center",
+            "bg-primary text-primary-foreground shadow-xl",
+            "transition-all duration-200 active:scale-95 overflow-hidden",
+            open && "ring-4 ring-primary/25 ring-offset-2 ring-offset-background"
+          )}
+        >
+          <AppIcon url="/icon-192.png" name={appName} />
+        </button>
+      </div>
+
+      {/* ── Theme toggle — bottom-left of FAB ── */}
+      <button
+        onClick={toggle}
+        aria-label={dark ? "Светлая тема" : "Тёмная тема"}
+        style={{
+          position: "fixed",
+          bottom: 24 + FAB_R - 18, // vertically centered with FAB
+          right:  24 + FAB_R * 2 + 12,
+          width:  36,
+          height: 36,
+          zIndex: 50,
+        }}
+        className="rounded-full bg-card border border-border shadow flex items-center justify-center text-muted-foreground transition-transform active:scale-90"
+      >
+        {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+      </button>
     </>
   );
 }
 
+// ── Layout ────────────────────────────────────────────────────────────────────
 export function Layout({ children }: { children: React.ReactNode }) {
-  const [open, setOpen] = useState(false);
-  const { dark, toggle } = useTheme();
   const { data: settings } = useGetSettings();
   const appName = settings?.appName || "Полиглот";
 
   return (
-    <div className="flex min-h-[100dvh] flex-col bg-background text-foreground md:pl-64">
+    <div className="flex min-h-[100dvh] flex-col bg-background text-foreground">
       <UpdateBanner />
 
-      {/* ── Mobile top bar ── */}
-      <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between h-14 px-4 border-b bg-card/90 backdrop-blur-md md:hidden">
-        <div className="flex items-center gap-2">
-          <div className="h-7 w-7 rounded-md bg-primary flex items-center justify-center text-primary-foreground">
-            <BookOpen className="h-4 w-4" />
-          </div>
-          <span className="font-serif font-bold text-lg tracking-tight text-primary">{appName}</span>
-        </div>
-
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="h-9 w-9" onClick={toggle} title={dark ? "Светлая тема" : "Тёмная тема"}>
-            {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-          </Button>
-          <Sheet open={open} onOpenChange={setOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-9 w-9">
-                <Menu className="h-5 w-5" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="w-64 p-6 flex flex-col gap-2">
-              <div className="flex items-center gap-2 mb-6">
-                <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground">
-                  <BookOpen className="h-5 w-5" />
-                </div>
-                <span className="font-serif font-bold text-xl tracking-tight text-primary">{appName}</span>
-              </div>
-              <NavLinks onClose={() => setOpen(false)} />
-            </SheetContent>
-          </Sheet>
-        </div>
-      </header>
-
-      {/* ── Desktop sidebar ── */}
-      <nav className="hidden md:flex fixed left-0 top-0 h-screen w-64 flex-col border-r bg-card/80 px-6 py-8 backdrop-blur-md">
-        <div className="flex items-center gap-2 mb-12">
-          <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground">
-            <BookOpen className="h-5 w-5" />
-          </div>
-          <span className="font-serif font-bold text-xl tracking-tight text-primary">{appName}</span>
-        </div>
-        <div className="flex flex-col gap-2 flex-1">
-          <NavLinks />
-        </div>
-        <Button variant="ghost" size="sm" className="w-full justify-start gap-3 text-muted-foreground" onClick={toggle}>
-          {dark ? <Sun className="h-5 w-5 shrink-0" /> : <Moon className="h-5 w-5 shrink-0" />}
-          <span className="text-sm">{dark ? "Светлая тема" : "Тёмная тема"}</span>
-        </Button>
-      </nav>
-
-      {/* ── Content ── */}
-      <main className="flex-1 w-full max-w-2xl mx-auto p-4 pt-[4.5rem] md:pt-8 md:p-8">
+      {/* ── Content — full width, bottom padding so FAB never covers it ── */}
+      <main className="flex-1 w-full max-w-2xl mx-auto px-4 pt-6 pb-28">
         {children}
       </main>
+
+      <RadialMenu appName={appName} />
     </div>
   );
 }
