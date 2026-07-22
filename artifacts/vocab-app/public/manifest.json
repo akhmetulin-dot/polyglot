@@ -1,6 +1,6 @@
 {
-  "name": "Полиглот — Интервальное повторение",
-  "short_name": "Полиглот",
+  "name": "Rustam Akhmetulin — Интервальное повторение",
+  "short_name": "Rustam Akhmetulin",
   "description": "Учи польский, немецкий и английский — интервальное повторение слов",
   "start_url": ".",
   "scope": ".",
@@ -24,5 +24,8 @@
     }
   ],
   "screenshots": [],
-  "categories": ["education", "utilities"]
+  "categories": [
+    "education",
+    "utilities"
+  ]
 }
