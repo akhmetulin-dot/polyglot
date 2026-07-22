@@ -39,7 +39,7 @@ function parseSettings(row: typeof settingsTable.$inferSelect) {
 // Update manifest.json with new app name
 async function updateManifest(appName: string): Promise<void> {
   try {
-    const manifestPath = path.resolve(process.cwd(), "artifacts/vocab-app/public/manifest.json");
+    const manifestPath = path.resolve(process.cwd(), "../vocab-app/public/manifest.json");
     const raw = await fs.readFile(manifestPath, "utf-8");
     const manifest = JSON.parse(raw);
     manifest.name = `${appName} — Интервальное повторение`;
@@ -123,7 +123,8 @@ router.post("/app-icon", async (req, res): Promise<void> => {
     const base64 = dataUrl.split(",")[1];
     if (!base64) { res.status(400).json({ error: "Invalid data URL" }); return; }
     const buffer = Buffer.from(base64, "base64");
-    const publicDir = path.resolve(process.cwd(), "artifacts/vocab-app/public");
+    // process.cwd() = artifacts/api-server/, so go one level up to workspace root
+    const publicDir = path.resolve(process.cwd(), "../vocab-app/public");
 
     // Write icon at two sizes (same source, browser will resize for display)
     await fs.writeFile(path.join(publicDir, "icon-192.png"), buffer);

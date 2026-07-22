@@ -73,10 +73,11 @@ export default function Settings() {
         toast({ title: "Иконка загружена", description: "Переустанови приложение на экран домой для применения новой иконки." });
         setIconFile(null);
       } else {
-        toast({ title: "Ошибка загрузки", variant: "destructive" });
+        const body = await res.json().catch(() => ({}));
+        toast({ title: "Ошибка загрузки", description: body?.error ?? `HTTP ${res.status}`, variant: "destructive" });
       }
-    } catch {
-      toast({ title: "Ошибка загрузки", variant: "destructive" });
+    } catch (e) {
+      toast({ title: "Ошибка загрузки", description: String(e), variant: "destructive" });
     }
   };
 
