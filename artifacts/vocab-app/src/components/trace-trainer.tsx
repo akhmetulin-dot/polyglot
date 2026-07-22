@@ -118,6 +118,11 @@ export function TraceTrainer({
   const [completedWords, setCompletedWords] = useState(0);
   const [finished, setFinished]             = useState(false);
   const firstInputRef      = useRef<HTMLInputElement>(null);
+  // ── Bridge: a persistent offscreen input, always mounted.
+  //    Focused SYNCHRONOUSLY when all rows complete → iOS never sees a gap
+  //    where no input is focused, so the keyboard stays up through the
+  //    word transition (unmount old inputs → mount new inputs).
+  const bridgeRef          = useRef<HTMLInputElement>(null);
   const isLandscape        = useIsLandscape();
 
   // ── iOS-safe focus: set this ref to the target element id, then it's
@@ -169,78 +174,69 @@ export function TraceTrainer({
 
   const handleChange = (rowIndex: number, field: Field, value: string) => {
     if (!current) return;
+    // Read current row directly — safe because this runs synchronously
+    // in the same user-event tick, so `rows` is always current here.
+    if (rows[rowIndex].done) return;
 
-    setRows(prev => {
-      if (prev[rowIndex].done) return prev;
+    const row = { ...rows[rowIndex], [field]: value };
 
-      const next = prev.map((r, i) =>
-        i === rowIndex ? { ...r, [field]: value } : r
+    const plOk = !current.polish  || norm(row.pl) === norm(current.polish  ?? "");
+    const deOk = !current.german  || norm(row.de) === norm(current.german  ?? "");
+    const enOk = !current.english || norm(row.en) === norm(current.english ?? "");
+
+    const fieldTarget =
+      field === "pl" ? current.polish :
+      field === "de" ? current.german : current.english;
+    const isCurrentCorrect = !!fieldTarget && norm(value) === norm(fieldTarget);
+    const rowWillBeDone    = plOk && deOk && enOk;
+
+    if (rowWillBeDone) {
+      const next = rows.map((r, i) =>
+        i === rowIndex ? { ...row, done: true, flash: true } : r
       );
-      const row = next[rowIndex];
+      const allDone = next.every(r => r.done);
 
-      const plOk = !current.polish  || norm(row.pl) === norm(current.polish  ?? "");
-      const deOk = !current.german  || norm(row.de) === norm(current.german  ?? "");
-      const enOk = !current.english || norm(row.en) === norm(current.english ?? "");
-
-      // ── Check if THIS specific field just became correct ──
-      const fieldTarget =
-        field === "pl" ? current.polish :
-        field === "de" ? current.german : current.english;
-      const isCurrentCorrect = !!fieldTarget && norm(value) === norm(fieldTarget);
-
-      const rowWillBeDone = plOk && deOk && enOk;
-
-      if (rowWillBeDone) {
-        // Mark done immediately so next row unlocks on this same render
-        next[rowIndex] = { ...row, done: true, flash: true };
-
-        // Schedule focus on next undone row — applied after React re-renders
-        // (which unlocks the next row, making focus possible)
+      if (allDone) {
+        // ── KEY: focus the bridge SYNCHRONOUSLY, BEFORE setRows / any re-render.
+        //    iOS only closes the keyboard when focus falls to null.
+        //    Bridge → (React re-renders, old inputs unmount, new inputs mount) → firstInput
+        //    = unbroken focus chain, keyboard stays open the whole time.
+        bridgeRef.current?.focus();
+      } else {
         const firstUndone = next.findIndex(x => !x.done);
-        if (firstUndone >= 0) {
-          const firstField = getActiveFields(current)[0];
-          pendingFocusId.current = `trace-input-${firstUndone}-${firstField}`;
-        }
-        // else: all rows done → word advance handled below via setTimeout
-        // (only the advance is delayed, not the focus — focusFirstOnRender handles that)
-
-        // Clear flash after animation (visual only — word advance is handled
-        // by the rows useEffect, synchronously in the commit phase)
-        setTimeout(() => {
-          setRows(r => r.map((x, i) => i === rowIndex ? { ...x, flash: false } : x));
-        }, 400);
-
-      } else if (isCurrentCorrect) {
-        // ── Auto-advance to next field in same row ──
-        const fieldOrder = getActiveFields(current);
-        const fieldIdx   = fieldOrder.indexOf(field);
-        if (fieldIdx < fieldOrder.length - 1) {
-          const nextField = fieldOrder[fieldIdx + 1];
-          const nextValue = row[nextField];
-          const nextTarget =
-            nextField === "pl" ? current.polish :
-            nextField === "de" ? current.german : current.english;
-          const nextAlreadyOk = !!nextTarget && norm(nextValue) === norm(nextTarget);
-          if (!nextAlreadyOk) {
-            pendingFocusId.current = `trace-input-${rowIndex}-${nextField}`;
-          }
-        } else {
-          // Last field in row completed but row not done yet (other fields still empty)
-          // → wrap to first field of same row so user can fill remaining
-          const firstField = fieldOrder[0];
-          const firstValue = row[firstField];
-          const firstTarget =
-            firstField === "pl" ? current.polish :
-            firstField === "de" ? current.german : current.english;
-          const firstAlreadyOk = !!firstTarget && norm(firstValue) === norm(firstTarget);
-          if (!firstAlreadyOk) {
-            pendingFocusId.current = `trace-input-${rowIndex}-${firstField}`;
-          }
-        }
+        pendingFocusId.current = `trace-input-${firstUndone}-${getActiveFields(current)[0]}`;
       }
 
-      return next;
-    });
+      setRows(next);
+      // Clear flash after animation (visual only — word advance is done by useEffect on rows)
+      setTimeout(() => {
+        setRows(r => r.map((x, i) => i === rowIndex ? { ...x, flash: false } : x));
+      }, 400);
+
+    } else if (isCurrentCorrect) {
+      // ── Auto-advance to next field in same row ──
+      const fieldOrder = getActiveFields(current);
+      const fieldIdx   = fieldOrder.indexOf(field);
+      if (fieldIdx < fieldOrder.length - 1) {
+        const nextField  = fieldOrder[fieldIdx + 1];
+        const nextTarget =
+          nextField === "pl" ? current.polish :
+          nextField === "de" ? current.german : current.english;
+        const nextAlreadyOk = !!nextTarget && norm(row[nextField]) === norm(nextTarget);
+        if (!nextAlreadyOk) pendingFocusId.current = `trace-input-${rowIndex}-${nextField}`;
+      } else {
+        // Last field done but row not yet complete → wrap to first unfilled field
+        const firstField  = fieldOrder[0];
+        const firstTarget =
+          firstField === "pl" ? current.polish :
+          firstField === "de" ? current.german : current.english;
+        const firstAlreadyOk = !!firstTarget && norm(row[firstField]) === norm(firstTarget);
+        if (!firstAlreadyOk) pendingFocusId.current = `trace-input-${rowIndex}-${firstField}`;
+      }
+      setRows(rows.map((r, i) => i === rowIndex ? row : r));
+    } else {
+      setRows(rows.map((r, i) => i === rowIndex ? row : r));
+    }
   };
 
   const handleInputFocus = (e: React.FocusEvent<HTMLInputElement>) => {
@@ -386,9 +382,30 @@ export function TraceTrainer({
   );
 
   // ── LANDSCAPE: reference LEFT, inputs RIGHT ──────────────────────────────
+  // ── Bridge input: always mounted, offscreen, keeps iOS keyboard alive
+  //    across word transitions (focused synchronously when all rows complete).
+  const bridge = (
+    <input
+      ref={bridgeRef}
+      aria-hidden="true"
+      tabIndex={-1}
+      readOnly
+      style={{
+        position: "fixed",
+        left: "-9999px",
+        top: "-9999px",
+        width: "1px",
+        height: "1px",
+        opacity: 0,
+        pointerEvents: "none",
+      }}
+    />
+  );
+
   if (isLandscape) {
     return (
       <div className="w-full flex flex-col gap-2">
+        {bridge}
         <div className="flex items-center gap-3">
           <div className="flex-1">{progressBar}</div>
           {counter}
@@ -410,6 +427,7 @@ export function TraceTrainer({
   // ── PORTRAIT: standard vertical ──────────────────────────────────────────
   return (
     <div className="w-full max-w-xl mx-auto flex flex-col gap-4">
+      {bridge}
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0 flex-1">{headerRight}</div>
         {counter}
