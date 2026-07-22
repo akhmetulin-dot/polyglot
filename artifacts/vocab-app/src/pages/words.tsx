@@ -190,9 +190,47 @@ export default function Words() {
   const [isTrashOpen, setIsTrashOpen] = useState(false);
   const [historyWordId, setHistoryWordId] = useState<number | null>(null);
   const [isTranslating, setIsTranslating] = useState(false);
+  const [isDeletingTrash, setIsDeletingTrash] = useState(false);
 
-  const { data: trashedWords } = useListTrashedWords({ query: { enabled: isTrashOpen } as never });
+  const { data: trashedWords, refetch: refetchTrash } = useListTrashedWords({ query: { enabled: isTrashOpen } as never });
   const restoreWord = useRestoreWord();
+
+  const handlePermanentDelete = async (id: number) => {
+    if (!confirm("Удалить навсегда? Восстановить будет невозможно.")) return;
+    setIsDeletingTrash(true);
+    try {
+      const res = await fetch(`/api/words/${id}/permanent`, { method: "DELETE" });
+      if (res.ok) {
+        await refetchTrash();
+        toast({ title: "Слово удалено навсегда" });
+      } else {
+        toast({ title: "Ошибка удаления", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Ошибка сети", variant: "destructive" });
+    } finally {
+      setIsDeletingTrash(false);
+    }
+  };
+
+  const handleClearTrash = async () => {
+    const count = trashedWords?.words.length ?? 0;
+    if (!confirm(`Удалить все ${count} слов навсегда? Восстановить будет невозможно.`)) return;
+    setIsDeletingTrash(true);
+    try {
+      const res = await fetch("/api/words/trash", { method: "DELETE" });
+      if (res.ok) {
+        await refetchTrash();
+        toast({ title: "Корзина очищена", description: `Удалено слов: ${count}` });
+      } else {
+        toast({ title: "Ошибка очистки", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Ошибка сети", variant: "destructive" });
+    } finally {
+      setIsDeletingTrash(false);
+    }
+  };
 
   const { data: wordHistory } = useGetWordHistory(historyWordId ?? 0, { query: { enabled: historyWordId !== null } as never });
 
@@ -780,29 +818,66 @@ export default function Words() {
               <Trash2 className="h-5 w-5" /> Корзина
             </DialogTitle>
             <DialogDescription className="text-sm pt-1">
-              Удалённые слова. Восстановите их в словарь или удалите навсегда.
+              Удалённые слова. Восстановите или удалите навсегда — без возможности восстановления.
             </DialogDescription>
           </DialogHeader>
           <div className="py-2 space-y-2">
             {(!trashedWords || trashedWords.words.length === 0) ? (
-              <p className="text-muted-foreground text-sm text-center py-4">Корзина пуста</p>
+              <p className="text-muted-foreground text-sm text-center py-8">Корзина пуста</p>
             ) : (
-              trashedWords.words.map(w => (
-                <div key={w.id} className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm">
-                  <div>
-                    <span className="font-bold font-serif">{w.russian}</span>
-                    <span className="text-muted-foreground text-xs ml-2">{[w.polish, w.german, w.english].filter(Boolean).join(" · ")}</span>
+              <>
+                {trashedWords.words.map(w => (
+                  <div key={w.id} className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm">
+                    {/* Word info */}
+                    <div className="flex-1 min-w-0">
+                      <span className="font-bold font-serif">{w.russian}</span>
+                      {[w.polish, w.german, w.english].filter(Boolean).length > 0 && (
+                        <span className="text-muted-foreground text-xs ml-2 truncate block">
+                          {[w.polish, w.german, w.english].filter(Boolean).join(" · ")}
+                        </span>
+                      )}
+                    </div>
+                    {/* Restore */}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="shrink-0 text-xs px-2"
+                      onClick={() => handleRestoreWord(w.id)}
+                      disabled={restoreWord.isPending || isDeletingTrash}
+                      title="Восстановить в словарь"
+                    >
+                      <RotateCcw className="h-3.5 w-3.5 mr-1" /> Вернуть
+                    </Button>
+                    {/* Permanent delete */}
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="shrink-0 h-8 w-8 text-destructive hover:bg-destructive/10"
+                      onClick={() => handlePermanentDelete(w.id)}
+                      disabled={isDeletingTrash}
+                      title="Удалить навсегда"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
                   </div>
+                ))}
+
+                {/* Clear all button */}
+                <div className="pt-3 border-t">
                   <Button
+                    variant="destructive"
                     size="sm"
-                    variant="ghost"
-                    onClick={() => handleRestoreWord(w.id)}
-                    disabled={restoreWord.isPending}
+                    className="w-full"
+                    onClick={handleClearTrash}
+                    disabled={isDeletingTrash}
                   >
-                    <RotateCcw className="h-4 w-4 mr-1" /> Восстановить
+                    {isDeletingTrash
+                      ? <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      : <Trash2 className="h-4 w-4 mr-2" />}
+                    Удалить все ({trashedWords.words.length})
                   </Button>
                 </div>
-              ))
+              </>
             )}
           </div>
         </DialogContent>

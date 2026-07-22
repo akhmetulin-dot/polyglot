@@ -337,6 +337,41 @@ router.patch("/words/:id", async (req, res): Promise<void> => {
   res.json(UpdateWordResponse.parse(word));
 });
 
+// ─── Permanent delete one word ────────────────────────────────────────────────
+router.delete("/words/:id/permanent", async (req, res): Promise<void> => {
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const id = parseInt(raw, 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+
+  // Also remove associated events
+  await db.delete(wordEventsTable).where(eq(wordEventsTable.wordId, id));
+  const [deleted] = await db
+    .delete(wordsTable)
+    .where(and(eq(wordsTable.id, id), isNotNull(wordsTable.deletedAt)))
+    .returning();
+
+  if (!deleted) { res.status(404).json({ error: "Word not found in trash" }); return; }
+  res.sendStatus(204);
+});
+
+// ─── Permanent delete ALL trashed words ───────────────────────────────────────
+router.delete("/words/trash", async (_req, res): Promise<void> => {
+  const trashed = await db
+    .select({ id: wordsTable.id })
+    .from(wordsTable)
+    .where(isNotNull(wordsTable.deletedAt));
+
+  if (trashed.length > 0) {
+    const ids = trashed.map(w => w.id);
+    for (const id of ids) {
+      await db.delete(wordEventsTable).where(eq(wordEventsTable.wordId, id));
+    }
+    await db.delete(wordsTable).where(isNotNull(wordsTable.deletedAt));
+  }
+
+  res.json({ deleted: trashed.length });
+});
+
 // ─── Soft delete (move to trash) ─────────────────────────────────────────────
 router.delete("/words/:id", async (req, res): Promise<void> => {
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
