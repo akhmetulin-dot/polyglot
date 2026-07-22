@@ -338,19 +338,14 @@ export function Trainer({ words: initialWords, title, onFinish }: TrainerProps) 
       )}>
         <p className="text-xs uppercase tracking-widest text-muted-foreground font-semibold text-center">Закрепление — обведи слова</p>
 
-        {/* One-line visual reference: russian — PL — DE — EN */}
-        <div className="text-center text-sm font-mono text-muted-foreground/50 leading-relaxed">
-          <span className="text-foreground font-bold text-lg">{tracingWord.russian}</span>
-          {tracingWord.polish && <span> — {tracingWord.polish}</span>}
-          {tracingWord.german && <span> — {tracingWord.german}</span>}
-          {tracingWord.english && <span> — {tracingWord.english}</span>}
-        </div>
-
-        {/* Tracing inputs with ghost text (placeholder = correct answer) */}
-        <div className="space-y-3">
+        {/* Tracing inputs — answer shown as text above each field */}
+        <div className="space-y-4">
           {tracingWord.polish && (
             <div className="grid gap-1.5">
-              <label className="text-xs uppercase text-muted-foreground font-bold tracking-wider ml-1">🇵🇱 PL</label>
+              <div className="flex items-baseline gap-2 ml-1 flex-wrap">
+                <label className="text-xs uppercase text-muted-foreground font-bold tracking-wider shrink-0">🇵🇱 PL</label>
+                <span className="text-base font-semibold text-foreground break-all leading-snug">{tracingWord.polish}</span>
+              </div>
               <Input
                 value={tracingPl}
                 onChange={e => {
@@ -358,7 +353,7 @@ export function Trainer({ words: initialWords, title, onFinish }: TrainerProps) 
                   setTracingPl(v);
                   checkTracing(v, tracingDe, tracingEn);
                 }}
-                placeholder={tracingWord.polish}
+                placeholder="напишите..."
                 autoFocus
                 autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck={false}
                 lang="pl"
@@ -371,7 +366,10 @@ export function Trainer({ words: initialWords, title, onFinish }: TrainerProps) 
           )}
           {tracingWord.german && (
             <div className="grid gap-1.5">
-              <label className="text-xs uppercase text-muted-foreground font-bold tracking-wider ml-1">🇩🇪 DE</label>
+              <div className="flex items-baseline gap-2 ml-1 flex-wrap">
+                <label className="text-xs uppercase text-muted-foreground font-bold tracking-wider shrink-0">🇩🇪 DE</label>
+                <span className="text-base font-semibold text-foreground break-all leading-snug">{tracingWord.german}</span>
+              </div>
               <Input
                 value={tracingDe}
                 onChange={e => {
@@ -379,7 +377,7 @@ export function Trainer({ words: initialWords, title, onFinish }: TrainerProps) 
                   setTracingDe(v);
                   checkTracing(tracingPl, v, tracingEn);
                 }}
-                placeholder={tracingWord.german}
+                placeholder="напишите..."
                 autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck={false}
                 lang="de"
                 className={cn(
@@ -391,7 +389,10 @@ export function Trainer({ words: initialWords, title, onFinish }: TrainerProps) 
           )}
           {tracingWord.english && (
             <div className="grid gap-1.5">
-              <label className="text-xs uppercase text-muted-foreground font-bold tracking-wider ml-1">🇬🇧 EN</label>
+              <div className="flex items-baseline gap-2 ml-1 flex-wrap">
+                <label className="text-xs uppercase text-muted-foreground font-bold tracking-wider shrink-0">🇬🇧 EN</label>
+                <span className="text-base font-semibold text-foreground break-all leading-snug">{tracingWord.english}</span>
+              </div>
               <Input
                 value={tracingEn}
                 onChange={e => {
@@ -399,7 +400,7 @@ export function Trainer({ words: initialWords, title, onFinish }: TrainerProps) 
                   setTracingEn(v);
                   checkTracing(tracingPl, tracingDe, v);
                 }}
-                placeholder={tracingWord.english}
+                placeholder="напишите..."
                 autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck={false}
                 lang="en"
                 className={cn(
