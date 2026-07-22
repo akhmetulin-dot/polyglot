@@ -33,15 +33,12 @@ function getActiveFields(word: Word): Field[] {
 }
 
 // ─── Landscape detection ────────────────────────────────────────────────────
-// "Mobile landscape" = width > height AND height < 600px (phone held sideways)
 function useIsLandscape() {
   const check = () =>
     typeof window !== "undefined" &&
     window.innerWidth > window.innerHeight &&
     window.innerHeight < 600;
-
   const [landscape, setLandscape] = useState(check);
-
   useEffect(() => {
     const handler = () => setLandscape(check());
     window.addEventListener("resize", handler);
@@ -51,7 +48,6 @@ function useIsLandscape() {
       screen.orientation?.removeEventListener?.("change", handler);
     };
   }, []);
-
   return landscape;
 }
 
@@ -67,50 +63,43 @@ interface FieldInputProps {
 }
 
 const FieldInput = forwardRef<HTMLInputElement, FieldInputProps>(
-  ({ id, hint, value, onChange, onFocus, done, lang }, ref) => {
-    return (
-      <div className="flex flex-col items-stretch min-w-0" style={{ flex: Math.max(hint.length, 4) }}>
-        {/* Always-visible target word above the input */}
-        <span className="text-[11px] text-muted-foreground/60 font-mono leading-none mb-1 truncate select-none">
-          {hint}
+  ({ id, hint, value, onChange, onFocus, done, lang }, ref) => (
+    <div className="flex flex-col items-stretch min-w-0" style={{ flex: Math.max(hint.length, 4) }}>
+      <span className="text-[11px] text-muted-foreground/60 font-mono leading-none mb-1 truncate select-none">
+        {hint}
+      </span>
+      <div className="inline-grid w-full">
+        <span
+          aria-hidden
+          className="invisible whitespace-pre text-sm px-0 py-1 col-start-1 row-start-1"
+          style={{ fontFamily: "inherit" }}
+        >
+          {value || hint || "____"}
         </span>
-
-        {/* inline-grid sizer: container width = max(hint width, typed width) */}
-        <div className="inline-grid w-full">
-          {/* Hidden sizer */}
-          <span
-            aria-hidden
-            className="invisible whitespace-pre text-sm px-0 py-1 col-start-1 row-start-1"
-            style={{ fontFamily: "inherit" }}
-          >
-            {value || hint || "____"}
-          </span>
-
-          <input
-            ref={ref}
-            id={id}
-            value={value}
-            onChange={e => onChange(e.target.value)}
-            onFocus={onFocus}
-            disabled={done}
-            lang={lang}
-            autoComplete="off"
-            autoCorrect="off"
-            autoCapitalize="none"
-            spellCheck={false}
-            className={cn(
-              "col-start-1 row-start-1 w-full bg-transparent",
-              "border-0 border-b-2 rounded-none px-0 py-1 text-sm",
-              "focus:outline-none transition-colors",
-              done
-                ? "border-green-400/60 text-green-700 dark:text-green-400 cursor-default"
-                : "border-border focus:border-primary",
-            )}
-          />
-        </div>
+        <input
+          ref={ref}
+          id={id}
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          onFocus={onFocus}
+          disabled={done}
+          lang={lang}
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="none"
+          spellCheck={false}
+          className={cn(
+            "col-start-1 row-start-1 w-full bg-transparent",
+            "border-0 border-b-2 rounded-none px-0 py-1 text-sm",
+            "focus:outline-none transition-colors",
+            done
+              ? "border-green-400/60 text-green-700 dark:text-green-400 cursor-default"
+              : "border-border focus:border-primary",
+          )}
+        />
       </div>
-    );
-  }
+    </div>
+  )
 );
 FieldInput.displayName = "FieldInput";
 
@@ -128,14 +117,35 @@ export function TraceTrainer({
   );
   const [completedWords, setCompletedWords] = useState(0);
   const [finished, setFinished]             = useState(false);
-  const firstInputRef = useRef<HTMLInputElement>(null);
-  const isLandscape   = useIsLandscape();
+  const firstInputRef   = useRef<HTMLInputElement>(null);
+  const isLandscape     = useIsLandscape();
+
+  // ── iOS-safe focus: set this ref to the target element id, then it's
+  //    applied synchronously in the useEffect that runs after every render.
+  //    useEffect is within the React commit phase — iOS keeps the keyboard up.
+  const pendingFocusId  = useRef<string | null>(null);
+  const focusFirstOnRender = useRef(false);
+
+  // Apply pending focus after every render (iOS-safe: runs in commit phase)
+  useEffect(() => {
+    if (focusFirstOnRender.current) {
+      focusFirstOnRender.current = false;
+      firstInputRef.current?.focus();
+      return;
+    }
+    if (pendingFocusId.current) {
+      const id = pendingFocusId.current;
+      pendingFocusId.current = null;
+      (document.getElementById(id) as HTMLInputElement | null)?.focus();
+    }
+  });
 
   const current: Word | undefined = words[wordIndex];
 
+  // Reset rows and schedule focus when word changes
   useEffect(() => {
     setRows(Array.from({ length: repetitions }, () => ({ pl: "", de: "", en: "", done: false, flash: false })));
-    setTimeout(() => firstInputRef.current?.focus(), 60);
+    focusFirstOnRender.current = true;
   }, [wordIndex, repetitions]);
 
   const norm = (s: string) => s.trim().toLowerCase();
@@ -155,13 +165,49 @@ export function TraceTrainer({
       const deOk = !current.german  || norm(row.de) === norm(current.german  ?? "");
       const enOk = !current.english || norm(row.en) === norm(current.english ?? "");
 
-      // ── Auto-advance to next field on correct input ──
-      const isCurrentCorrect =
-        (field === "pl" && !!current.polish  && norm(value) === norm(current.polish))  ||
-        (field === "de" && !!current.german  && norm(value) === norm(current.german))  ||
-        (field === "en" && !!current.english && norm(value) === norm(current.english));
+      // ── Check if THIS specific field just became correct ──
+      const fieldTarget =
+        field === "pl" ? current.polish :
+        field === "de" ? current.german : current.english;
+      const isCurrentCorrect = !!fieldTarget && norm(value) === norm(fieldTarget);
 
-      if (isCurrentCorrect) {
+      const rowWillBeDone = plOk && deOk && enOk;
+
+      if (rowWillBeDone) {
+        // Mark done immediately so next row unlocks on this same render
+        next[rowIndex] = { ...row, done: true, flash: true };
+
+        // Schedule focus on next undone row — applied after React re-renders
+        // (which unlocks the next row, making focus possible)
+        const firstUndone = next.findIndex(x => !x.done);
+        if (firstUndone >= 0) {
+          const firstField = getActiveFields(current)[0];
+          pendingFocusId.current = `trace-input-${firstUndone}-${firstField}`;
+        }
+        // else: all rows done → word advance handled below via setTimeout
+        // (only the advance is delayed, not the focus — focusFirstOnRender handles that)
+
+        // Clear flash after animation; advance word if all done
+        setTimeout(() => {
+          setRows(r => r.map((x, i) => i === rowIndex ? { ...x, flash: false } : x));
+          setRows(r => {
+            if (r.every(x => x.done)) {
+              const nextWord = wordIndex + 1;
+              setCompletedWords(c => c + 1);
+              if (nextWord >= words.length) {
+                setFinished(true);
+                onFinish?.();
+              } else {
+                setWordIndex(nextWord);
+                // focusFirstOnRender is set inside the wordIndex useEffect
+              }
+            }
+            return r;
+          });
+        }, 400);
+
+      } else if (isCurrentCorrect) {
+        // ── Auto-advance to next field in same row ──
         const fieldOrder = getActiveFields(current);
         const fieldIdx   = fieldOrder.indexOf(field);
         if (fieldIdx < fieldOrder.length - 1) {
@@ -172,44 +218,21 @@ export function TraceTrainer({
             nextField === "de" ? current.german : current.english;
           const nextAlreadyOk = !!nextTarget && norm(nextValue) === norm(nextTarget);
           if (!nextAlreadyOk) {
-            setTimeout(() => {
-              document.getElementById(`trace-input-${rowIndex}-${nextField}`)?.focus();
-            }, 0);
+            pendingFocusId.current = `trace-input-${rowIndex}-${nextField}`;
+          }
+        } else {
+          // Last field in row completed but row not done yet (other fields still empty)
+          // → wrap to first field of same row so user can fill remaining
+          const firstField = fieldOrder[0];
+          const firstValue = row[firstField];
+          const firstTarget =
+            firstField === "pl" ? current.polish :
+            firstField === "de" ? current.german : current.english;
+          const firstAlreadyOk = !!firstTarget && norm(firstValue) === norm(firstTarget);
+          if (!firstAlreadyOk) {
+            pendingFocusId.current = `trace-input-${rowIndex}-${firstField}`;
           }
         }
-      }
-
-      // ── All fields correct → flash + advance ──
-      if (plOk && deOk && enOk) {
-        next[rowIndex] = { ...row, done: true, flash: true };
-
-        setTimeout(() => {
-          setRows(r =>
-            r.map((x, i) => i === rowIndex ? { ...x, flash: false } : x)
-          );
-          setRows(r => {
-            const allDone = r.every(x => x.done);
-            if (allDone) {
-              const nextWord = wordIndex + 1;
-              setCompletedWords(c => c + 1);
-              if (nextWord >= words.length) {
-                setFinished(true);
-                onFinish?.();
-              } else {
-                setWordIndex(nextWord);
-              }
-            } else {
-              const firstUndone = r.findIndex(x => !x.done);
-              if (firstUndone >= 0) {
-                const firstField = getActiveFields(current)[0];
-                setTimeout(() => {
-                  document.getElementById(`trace-input-${firstUndone}-${firstField}`)?.focus();
-                }, 0);
-              }
-            }
-            return r;
-          });
-        }, 700);
       }
 
       return next;
@@ -217,9 +240,8 @@ export function TraceTrainer({
   };
 
   const handleInputFocus = (e: React.FocusEvent<HTMLInputElement>) => {
-    // In landscape, don't scroll — the layout is already optimised
     if (!isLandscape) {
-      setTimeout(() => e.target.scrollIntoView({ behavior: "smooth", block: "center" }), 300);
+      setTimeout(() => e.target.scrollIntoView({ behavior: "smooth", block: "center" }), 200);
     }
   };
 
@@ -229,7 +251,7 @@ export function TraceTrainer({
     else { setCompletedWords(c => c + 1); setWordIndex(next); }
   };
 
-  // ── Empty / Finished states ──────────────────────────────────────────────
+  // ── Empty / Finished ────────────────────────────────────────────────────
 
   if (!words.length) {
     return (
@@ -276,11 +298,9 @@ export function TraceTrainer({
     .filter(Boolean)
     .join(" · ");
 
-  // ── Shared sub-elements ──────────────────────────────────────────────────
+  // ── Shared elements ─────────────────────────────────────────────────────
 
-  const progressBar = (
-    <Progress value={progressPercent} className="h-1" />
-  );
+  const progressBar = <Progress value={progressPercent} className="h-1" />;
 
   const counter = (
     <div className="text-sm font-semibold bg-secondary/60 px-3 py-1.5 rounded-full flex items-center gap-1 text-primary shrink-0">
@@ -356,38 +376,24 @@ export function TraceTrainer({
   );
 
   const skipButton = (
-    <Button
-      variant="ghost"
-      size="sm"
-      className="text-muted-foreground self-start mt-1"
-      onClick={handleSkip}
-    >
+    <Button variant="ghost" size="sm" className="text-muted-foreground self-start mt-1" onClick={handleSkip}>
       Пропустить <ArrowRight className="ml-1 h-4 w-4" />
     </Button>
   );
 
-  // ── LANDSCAPE layout: reference LEFT, inputs RIGHT ───────────────────────
+  // ── LANDSCAPE: reference LEFT, inputs RIGHT ──────────────────────────────
   if (isLandscape) {
     return (
       <div className="w-full flex flex-col gap-2">
-        {/* Top bar: progress + counter */}
         <div className="flex items-center gap-3">
           <div className="flex-1">{progressBar}</div>
           {counter}
         </div>
-
-        {/* Two-column body */}
         <div className="grid grid-cols-[1fr_1fr] gap-4 items-start">
-
-          {/* LEFT — reference card + nav hint */}
           <div className="space-y-2">
             {referenceCard}
-            <div className="flex items-center justify-between">
-              <div className="min-w-0 flex-1 text-xs text-muted-foreground">{headerRight}</div>
-            </div>
+            <div className="min-w-0 text-xs text-muted-foreground">{headerRight}</div>
           </div>
-
-          {/* RIGHT — inputs + skip (positioned towards right thumb) */}
           <div className="flex flex-col gap-3">
             {inputRows}
             {skipButton}
@@ -397,26 +403,17 @@ export function TraceTrainer({
     );
   }
 
-  // ── PORTRAIT layout: standard vertical ───────────────────────────────────
+  // ── PORTRAIT: standard vertical ──────────────────────────────────────────
   return (
     <div className="w-full max-w-xl mx-auto flex flex-col gap-4">
-
-      {/* Header */}
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0 flex-1">{headerRight}</div>
         {counter}
       </div>
-
       {progressBar}
       {referenceCard}
       {inputRows}
-
-      <Button
-        variant="ghost"
-        size="sm"
-        className="text-muted-foreground self-center mt-1"
-        onClick={handleSkip}
-      >
+      <Button variant="ghost" size="sm" className="text-muted-foreground self-center mt-1" onClick={handleSkip}>
         Пропустить <ArrowRight className="ml-1 h-4 w-4" />
       </Button>
     </div>
