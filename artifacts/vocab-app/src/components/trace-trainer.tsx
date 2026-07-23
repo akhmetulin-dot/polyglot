@@ -380,7 +380,6 @@ export function TraceTrainer({
               autoCorrect="off"
               spellCheck={false}
               onKeyDown={e => {
-                if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSaveMnemonic(); }
                 if (e.key === "Escape") setIsEditingMnemonic(false);
               }}
             />
