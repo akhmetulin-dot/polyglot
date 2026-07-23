@@ -1,11 +1,19 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { useGetStats, useGetSettings } from "@workspace/api-client-react";
+import { useGetStats, useGetSettings, useListWords } from "@workspace/api-client-react";
+
+const TYPE_LABELS: Record<string, string> = {
+  academic:  "Академические",
+  everyday:  "Базовые",
+  mixed:     "Смешанные",
+  __none__:  "Без типа",
+};
 
 export default function Home() {
   const { data: stats, isLoading } = useGetStats();
   const { data: settings } = useGetSettings();
+  const { data: wordsData } = useListWords({ limit: 1000 });
 
   if (isLoading || !stats) return null;
 
@@ -13,6 +21,29 @@ export default function Home() {
   const masteredPct = stats.totalWords > 0
     ? (stats.masteredWords / stats.totalWords) * 100
     : 0;
+
+  // ── Breakdown by wordType ────────────────────────────────────────────────────
+  const words = wordsData?.words ?? [];
+  const typeCounts = words.reduce<Record<string, number>>((acc, w) => {
+    const key = w.wordType || "__none__";
+    acc[key] = (acc[key] ?? 0) + 1;
+    return acc;
+  }, {});
+
+  const typeOrder = ["academic", "everyday", "mixed", "__none__"];
+  const typeRows = typeOrder
+    .filter(k => typeCounts[k])
+    .map(k => ({ key: k, label: TYPE_LABELS[k], count: typeCounts[k] }));
+
+  // ── Breakdown by wordGroup ───────────────────────────────────────────────────
+  const groupCounts = words.reduce<Record<string, number>>((acc, w) => {
+    if (!w.wordGroup) return acc;
+    acc[w.wordGroup] = (acc[w.wordGroup] ?? 0) + 1;
+    return acc;
+  }, {});
+
+  const groupRows = Object.entries(groupCounts)
+    .sort(([, a], [, b]) => b - a);   // по убыванию
 
   return (
     <div className="flex flex-col gap-16 pb-12 pt-4 animate-in fade-in duration-500">
@@ -48,7 +79,7 @@ export default function Home() {
 
       </div>
 
-      {/* ── Статистика ── */}
+      {/* ── Общая статистика ── */}
       <div className="flex flex-col gap-6">
 
         <div className="flex justify-between">
@@ -82,6 +113,42 @@ export default function Home() {
         </div>
 
       </div>
+
+      {/* ── По типу слова ── */}
+      {typeRows.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <p className="text-xs uppercase tracking-widest text-muted-foreground font-semibold">По типу</p>
+          <div className="flex flex-col gap-3">
+            {typeRows.map(({ key, label, count }) => (
+              <div key={key}>
+                <div className="flex justify-between mb-1.5">
+                  <span className="text-sm text-muted-foreground">{label}</span>
+                  <span className="text-sm font-bold tabular-nums">{count}</span>
+                </div>
+                <Progress value={(count / stats.totalWords) * 100} className="h-0.5" />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── По смысловым группам ── */}
+      {groupRows.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <p className="text-xs uppercase tracking-widest text-muted-foreground font-semibold">По группам</p>
+          <div className="flex flex-col gap-3">
+            {groupRows.map(([group, count]) => (
+              <div key={group}>
+                <div className="flex justify-between mb-1.5">
+                  <span className="text-sm text-muted-foreground">{group}</span>
+                  <span className="text-sm font-bold tabular-nums">{count}</span>
+                </div>
+                <Progress value={(count / stats.totalWords) * 100} className="h-0.5" />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
     </div>
   );
