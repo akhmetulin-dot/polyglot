@@ -102,27 +102,6 @@ function RadialMenu({ appName }: { appName: string }) {
                   : `transform 130ms ease-in, opacity 90ms`,
               }}
             >
-              {/* Label (nav items only, to the left of the button) */}
-              {!isTheme && (
-                <span
-                  style={{
-                    position:  "absolute",
-                    right:     ITEM_R * 2 + 8,
-                    top:       "50%",
-                    transform: "translateY(-50%)",
-                    opacity:   open ? 1 : 0,
-                    transition: `opacity ${open ? 200 + i * 40 + 80 : 70}ms`,
-                  }}
-                  className={cn(
-                    "whitespace-nowrap text-xs font-semibold rounded-full px-2.5 py-0.5 shadow-sm select-none",
-                    isActive
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-card/95 text-foreground border border-border backdrop-blur-sm"
-                  )}
-                >
-                  {(item as { label: string }).label}
-                </span>
-              )}
 
               {/* Button */}
               <button
