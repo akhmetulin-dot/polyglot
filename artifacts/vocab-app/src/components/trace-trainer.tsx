@@ -2,8 +2,15 @@ import { useState, useEffect, useRef, forwardRef, type ReactNode } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Check, ArrowRight, PenLine } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Check, ArrowRight, PenLine, Pencil, Save } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  useUpdateWord,
+  getListWordsQueryKey,
+  getGetWordQueryKey,
+} from "@workspace/api-client-react";
 import type { Word } from "@workspace/api-client-react";
 
 interface TraceTrainerProps {
@@ -132,6 +139,15 @@ export function TraceTrainer({
   const pendingFocusId     = useRef<string | null>(null);
   const focusFirstOnRender = useRef(false);
 
+  // ── Mnemonic inline editing ──────────────────────────────────────────────
+  const [isEditingMnemonic, setIsEditingMnemonic] = useState(false);
+  const [mnemonicDraft, setMnemonicDraft]         = useState("");
+  // Local override so UI updates immediately after save without waiting for refetch
+  const [localMnemonic, setLocalMnemonic]         = useState<string | null | undefined>(undefined);
+  const mnemonicRef  = useRef<HTMLTextAreaElement>(null);
+  const updateWord   = useUpdateWord();
+  const queryClient  = useQueryClient();
+
   // Apply pending focus after every render (iOS-safe: runs in commit phase)
   useEffect(() => {
     if (focusFirstOnRender.current) {
@@ -148,11 +164,37 @@ export function TraceTrainer({
 
   const current: Word | undefined = words[wordIndex];
 
-  // Reset rows and schedule focus when word changes
+  // Reset rows and mnemonic state when word changes
   useEffect(() => {
     setRows(Array.from({ length: repetitions }, () => ({ pl: "", de: "", en: "", done: false, flash: false })));
+    setLocalMnemonic(undefined);
+    setIsEditingMnemonic(false);
     focusFirstOnRender.current = true;
   }, [wordIndex, repetitions]);
+
+  const displayMnemonic = localMnemonic !== undefined ? localMnemonic : current?.mnemonic;
+
+  const handleStartEditMnemonic = () => {
+    setMnemonicDraft(displayMnemonic || "");
+    setIsEditingMnemonic(true);
+    setTimeout(() => mnemonicRef.current?.focus(), 50);
+  };
+
+  const handleSaveMnemonic = () => {
+    if (!current) return;
+    const trimmed = mnemonicDraft.trim() || null;
+    updateWord.mutate(
+      { id: current.id, data: { mnemonic: trimmed ?? undefined } },
+      {
+        onSuccess: () => {
+          setLocalMnemonic(trimmed);
+          setIsEditingMnemonic(false);
+          queryClient.invalidateQueries({ queryKey: getListWordsQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getGetWordQueryKey(current.id) });
+        },
+      }
+    );
+  };
 
   // ── Advance to next word when ALL rows are done ──────────────────────────
   useEffect(() => {
@@ -310,9 +352,50 @@ export function TraceTrainer({
       <p className="text-sm text-muted-foreground whitespace-nowrap overflow-x-auto scrollbar-none">
         {translationLine}
       </p>
-      {current.mnemonic && (
-        <p className="text-xs text-primary/50 italic leading-relaxed">{current.mnemonic}</p>
-      )}
+      {/* Mnemonic — inline editable */}
+      <div className="group pt-0.5">
+        {isEditingMnemonic ? (
+          <div className="space-y-2">
+            <Textarea
+              ref={mnemonicRef}
+              value={mnemonicDraft}
+              onChange={e => setMnemonicDraft(e.target.value)}
+              placeholder="Напишите свою подсказку..."
+              className="text-xs resize-none bg-background min-h-[52px]"
+              rows={2}
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
+              onKeyDown={e => {
+                if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSaveMnemonic(); }
+                if (e.key === "Escape") setIsEditingMnemonic(false);
+              }}
+            />
+            <div className="flex gap-2">
+              <Button size="sm" onClick={handleSaveMnemonic} disabled={updateWord.isPending} className="h-7 text-xs">
+                <Save className="h-3 w-3 mr-1" />
+                {updateWord.isPending ? "Сохраняю..." : "Сохранить"}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setIsEditingMnemonic(false)} className="h-7 text-xs">
+                Отмена
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div
+            className="flex items-start gap-1.5 cursor-pointer rounded-lg px-1 py-0.5 -mx-1 hover:bg-primary/10 transition-colors"
+            onClick={handleStartEditMnemonic}
+            title="Нажмите чтобы изменить подсказку"
+          >
+            {displayMnemonic ? (
+              <p className="text-xs text-primary/60 italic flex-1 leading-relaxed">"{displayMnemonic}"</p>
+            ) : (
+              <p className="text-xs text-muted-foreground/50 flex-1">+ добавить подсказку</p>
+            )}
+            <Pencil className="h-3 w-3 text-muted-foreground/30 group-hover:text-primary/50 shrink-0 mt-0.5 transition-colors" />
+          </div>
+        )}
+      </div>
     </div>
   );
 
