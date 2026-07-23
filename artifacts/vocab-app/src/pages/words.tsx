@@ -444,6 +444,7 @@ export default function Words() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [sortBy, setSortBy] = useState<ListWordsSortBy>(ListWordsSortBy.frequency);
   const [filterType, setFilterType] = useState<string>("all");
+  const [filterGroup, setFilterGroup] = useState<string>("all");
   const [sortDifficult, setSortDifficult] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingWord, setEditingWord] = useState<Word | null>(null);
@@ -463,6 +464,11 @@ export default function Words() {
     search: debouncedSearch || undefined, 
     sortBy 
   });
+
+  // Unique word groups from current data — shown in the group filter dropdown
+  const availableGroups = Array.from(
+    new Set((wordsData?.words ?? []).map(w => w.wordGroup).filter(Boolean) as string[])
+  ).sort((a, b) => a.localeCompare(b, "ru"));
 
   const bulkImportWords = useBulkImportWords();
 
@@ -639,15 +645,14 @@ export default function Words() {
           <div className="flex items-baseline gap-3">
           <h1 className="text-2xl sm:text-3xl font-bold font-serif text-foreground">Словарь</h1>
           {wordsData && (() => {
-            const filtered = filterType === "all"
-              ? wordsData.words.length
-              : wordsData.words.filter(w =>
-                  filterType === "none" ? !w.wordType : w.wordType === filterType
-                ).length;
-            const showFilter = filterType !== "all" || !!debouncedSearch;
+            const filtered = wordsData.words.filter(w =>
+              (filterType === "all" ? true : filterType === "none" ? !w.wordType : w.wordType === filterType) &&
+              (filterGroup === "all" ? true : w.wordGroup === filterGroup)
+            ).length;
+            const showFilter = filterType !== "all" || filterGroup !== "all" || !!debouncedSearch;
             return (
               <span className="text-sm text-muted-foreground font-mono">
-                {showFilter && filterType !== "all" ? `${filtered} / ` : ""}{wordsData.total} сл.
+                {showFilter && (filterType !== "all" || filterGroup !== "all") ? `${filtered} / ` : ""}{wordsData.total} сл.
               </span>
             );
           })()}
@@ -717,6 +722,19 @@ export default function Words() {
             <SelectItem value="none">Без типа</SelectItem>
           </SelectContent>
         </Select>
+        {availableGroups.length > 0 && (
+          <Select value={filterGroup} onValueChange={setFilterGroup}>
+            <SelectTrigger className="sm:w-[160px]">
+              <SelectValue placeholder="Группа" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Все группы</SelectItem>
+              {availableGroups.map(g => (
+                <SelectItem key={g} value={g}>{g}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
         <Select
           value={sortDifficult ? "difficult" : sortBy}
           onValueChange={(val) => {
@@ -741,11 +759,10 @@ export default function Words() {
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       ) : (wordsData?.words.filter(w =>
-            filterType === "all" ? true :
-            filterType === "none" ? !w.wordType :
-            w.wordType === filterType
-          ).length === 0 && filterType !== "all") ? (
-        <div className="text-center py-12 text-muted-foreground">Нет слов с этим типом</div>
+            (filterType === "all" ? true : filterType === "none" ? !w.wordType : w.wordType === filterType) &&
+            (filterGroup === "all" ? true : w.wordGroup === filterGroup)
+          ).length === 0 && (filterType !== "all" || filterGroup !== "all")) ? (
+        <div className="text-center py-12 text-muted-foreground">Нет слов с этим фильтром</div>
       ) : wordsData?.words.length === 0 ? (
         <Card className="border-dashed border-2 bg-transparent text-center py-12">
           <CardContent className="space-y-4 pt-6">
@@ -756,9 +773,8 @@ export default function Words() {
       ) : (
         <div className="divide-y divide-border/50 -mx-4">
           {(wordsData?.words ?? []).filter(w =>
-            filterType === "all" ? true :
-            filterType === "none" ? !w.wordType :
-            w.wordType === filterType
+            (filterType === "all" ? true : filterType === "none" ? !w.wordType : w.wordType === filterType) &&
+            (filterGroup === "all" ? true : w.wordGroup === filterGroup)
           ).sort(sortDifficult
             ? (a, b) => ((b.hintCount ?? 0) - (b.correctCount ?? 0)) - ((a.hintCount ?? 0) - (a.correctCount ?? 0))
             : () => 0
