@@ -237,17 +237,17 @@ export interface SettingsInput {
   errorRepeatAfter?: number;
   reviewIntervals?: number[];
   /**
-     * @minimum 5
+     * @minimum 1
      * @maximum 100
      */
   sessionSize?: number;
   /**
-     * @minimum 5
+     * @minimum 1
      * @maximum 100
      */
   reviewSessionSize?: number;
   /**
-     * @minimum 5
+     * @minimum 1
      * @maximum 100
      */
   traceSessionSize?: number;

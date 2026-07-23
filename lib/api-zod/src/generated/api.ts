@@ -498,13 +498,10 @@ export const GetSettingsResponse = zod.object({
  */
 export const updateSettingsBodyErrorRepeatAfterMax = 20;
 
-export const updateSettingsBodySessionSizeMin = 5;
 export const updateSettingsBodySessionSizeMax = 100;
 
-export const updateSettingsBodyReviewSessionSizeMin = 5;
 export const updateSettingsBodyReviewSessionSizeMax = 100;
 
-export const updateSettingsBodyTraceSessionSizeMin = 5;
 export const updateSettingsBodyTraceSessionSizeMax = 100;
 
 export const updateSettingsBodyTraceNewMax = 20;
@@ -525,9 +522,9 @@ export const updateSettingsBodyAppNameMax = 40;
 export const UpdateSettingsBody = zod.object({
   "errorRepeatAfter": zod.number().min(1).max(updateSettingsBodyErrorRepeatAfterMax).optional(),
   "reviewIntervals": zod.array(zod.number()).optional(),
-  "sessionSize": zod.number().min(updateSettingsBodySessionSizeMin).max(updateSettingsBodySessionSizeMax).optional(),
-  "reviewSessionSize": zod.number().min(updateSettingsBodyReviewSessionSizeMin).max(updateSettingsBodyReviewSessionSizeMax).optional(),
-  "traceSessionSize": zod.number().min(updateSettingsBodyTraceSessionSizeMin).max(updateSettingsBodyTraceSessionSizeMax).optional(),
+  "sessionSize": zod.number().min(1).max(updateSettingsBodySessionSizeMax).optional(),
+  "reviewSessionSize": zod.number().min(1).max(updateSettingsBodyReviewSessionSizeMax).optional(),
+  "traceSessionSize": zod.number().min(1).max(updateSettingsBodyTraceSessionSizeMax).optional(),
   "traceNew": zod.number().min(1).max(updateSettingsBodyTraceNewMax).optional(),
   "traceReview": zod.number().min(1).max(updateSettingsBodyTraceReviewMax).optional(),
   "traceError": zod.number().min(1).max(updateSettingsBodyTraceErrorMax).optional(),
