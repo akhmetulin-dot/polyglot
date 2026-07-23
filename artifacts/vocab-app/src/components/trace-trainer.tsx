@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, forwardRef, type ReactNode } from "react";
+import { useState, useEffect, useRef, type ReactNode } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -8,31 +8,63 @@ import type { Word } from "@workspace/api-client-react";
 
 interface TraceTrainerProps {
   words: Word[];
-  repetitions?: number;
+  repetitions?: number; // number of rolls (катки)
   title?: string;
   onFinish?: () => void;
   headerRight?: ReactNode;
 }
 
-interface RowState {
-  pl: string;
-  de: string;
-  en: string;
+type Field = "pl" | "de" | "en";
+
+interface StepState {
+  field: Field;
+  value: string;
   done: boolean;
   flash: boolean;
 }
 
-type Field = "pl" | "de" | "en";
+const FLAG: Record<Field, string> = { pl: "🇵🇱", de: "🇩🇪", en: "🇬🇧" };
+const LANG: Record<Field, string> = { pl: "pl", de: "de", en: "en" };
 
 function getActiveFields(word: Word): Field[] {
-  const fields: Field[] = [];
-  if (word.polish)  fields.push("pl");
-  if (word.german)  fields.push("de");
-  if (word.english) fields.push("en");
-  return fields;
+  const f: Field[] = [];
+  if (word.polish)  f.push("pl");
+  if (word.german)  f.push("de");
+  if (word.english) f.push("en");
+  return f;
 }
 
-// ─── Landscape detection ────────────────────────────────────────────────────
+/**
+ * Build the full step sequence for N rolls.
+ * 1 roll  = PL → DE → EN → DE → PL  (forward + backward without repeating the turn point)
+ * 2 rolls = [PL→DE→EN→DE→PL] [PL→DE→EN→DE→PL]
+ */
+function buildRollSequence(fields: Field[], rolls: number): Field[] {
+  if (!fields.length) return [];
+  if (fields.length === 1) {
+    // Only one language: just repeat it `rolls` times
+    return Array.from({ length: rolls }, () => fields[0]);
+  }
+  const forward  = [...fields];
+  const backward = [...fields].slice(0, -1).reverse(); // remove last, reverse
+  const oneRoll  = [...forward, ...backward];
+  const result: Field[] = [];
+  for (let i = 0; i < rolls; i++) result.push(...oneRoll);
+  return result;
+}
+
+function getWordValue(word: Word, field: Field): string {
+  return (field === "pl" ? word.polish : field === "de" ? word.german : word.english) ?? "";
+}
+
+function buildSteps(word: Word, rolls: number): StepState[] {
+  const fields = getActiveFields(word);
+  return buildRollSequence(fields, rolls).map(field => ({
+    field, value: "", done: false, flash: false,
+  }));
+}
+
+// ─── Landscape detection ─────────────────────────────────────────────────────
 function useIsLandscape() {
   const check = () =>
     typeof window !== "undefined" &&
@@ -40,98 +72,40 @@ function useIsLandscape() {
     window.innerHeight < 600;
   const [landscape, setLandscape] = useState(check);
   useEffect(() => {
-    const handler = () => setLandscape(check());
-    window.addEventListener("resize", handler);
-    screen.orientation?.addEventListener?.("change", handler);
+    const h = () => setLandscape(check());
+    window.addEventListener("resize", h);
+    screen.orientation?.addEventListener?.("change", h);
     return () => {
-      window.removeEventListener("resize", handler);
-      screen.orientation?.removeEventListener?.("change", handler);
+      window.removeEventListener("resize", h);
+      screen.orientation?.removeEventListener?.("change", h);
     };
   }, []);
   return landscape;
 }
 
-// ─── Auto-sizing input with persistent hint ────────────────────────────────
-interface FieldInputProps {
-  id: string;
-  hint: string;
-  value: string;
-  onChange: (v: string) => void;
-  onFocus?: (e: React.FocusEvent<HTMLInputElement>) => void;
-  done: boolean;
-  lang?: string;
-}
-
-const FieldInput = forwardRef<HTMLInputElement, FieldInputProps>(
-  ({ id, hint, value, onChange, onFocus, done, lang }, ref) => (
-    <div className="flex flex-col items-stretch min-w-0" style={{ flex: Math.max(hint.length, 4) }}>
-      <span className="text-[11px] text-muted-foreground/60 font-mono leading-none mb-1 truncate select-none">
-        {hint}
-      </span>
-      <div className="inline-grid w-full">
-        <span
-          aria-hidden
-          className="invisible whitespace-pre text-sm px-0 py-1 col-start-1 row-start-1"
-          style={{ fontFamily: "inherit" }}
-        >
-          {value || hint || "____"}
-        </span>
-        <input
-          ref={ref}
-          id={id}
-          value={value}
-          onChange={e => onChange(e.target.value)}
-          onFocus={onFocus}
-          disabled={done}
-          lang={lang}
-          autoComplete="off"
-          autoCorrect="off"
-          autoCapitalize="none"
-          spellCheck={false}
-          className={cn(
-            "col-start-1 row-start-1 w-full bg-transparent",
-            "border-0 border-b-2 rounded-none px-0 py-1 text-sm",
-            "focus:outline-none transition-colors",
-            done
-              ? "border-green-400/60 text-green-700 dark:text-green-400 cursor-default"
-              : "border-border focus:border-primary",
-          )}
-        />
-      </div>
-    </div>
-  )
-);
-FieldInput.displayName = "FieldInput";
-
-// ──────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
 
 export function TraceTrainer({
   words,
-  repetitions = 3,
+  repetitions = 1,
   onFinish,
   headerRight,
 }: TraceTrainerProps) {
   const [wordIndex, setWordIndex]           = useState(0);
-  const [rows, setRows]                     = useState<RowState[]>(() =>
-    Array.from({ length: repetitions }, () => ({ pl: "", de: "", en: "", done: false, flash: false }))
+  const [steps, setSteps]                   = useState<StepState[]>(() =>
+    words[0] ? buildSteps(words[0], repetitions) : []
   );
   const [completedWords, setCompletedWords] = useState(0);
   const [finished, setFinished]             = useState(false);
-  const firstInputRef      = useRef<HTMLInputElement>(null);
-  // ── Bridge: a persistent offscreen input, always mounted.
-  //    Focused SYNCHRONOUSLY when all rows complete → iOS never sees a gap
-  //    where no input is focused, so the keyboard stays up through the
-  //    word transition (unmount old inputs → mount new inputs).
-  const bridgeRef          = useRef<HTMLInputElement>(null);
-  const isLandscape        = useIsLandscape();
 
-  // ── iOS-safe focus: set this ref to the target element id, then it's
-  //    applied synchronously in the useEffect that runs after every render.
-  //    useEffect is within the React commit phase — iOS keeps the keyboard up.
+  const firstInputRef = useRef<HTMLInputElement>(null);
+  const bridgeRef     = useRef<HTMLInputElement>(null);
+  const isLandscape   = useIsLandscape();
+
+  // Pending focus id — applied synchronously in useEffect (iOS-safe)
   const pendingFocusId     = useRef<string | null>(null);
   const focusFirstOnRender = useRef(false);
 
-  // Apply pending focus after every render (iOS-safe: runs in commit phase)
   useEffect(() => {
     if (focusFirstOnRender.current) {
       focusFirstOnRender.current = false;
@@ -147,17 +121,16 @@ export function TraceTrainer({
 
   const current: Word | undefined = words[wordIndex];
 
-  // Reset rows and schedule focus when word changes
+  // Reset steps when word or rolls change
   useEffect(() => {
-    setRows(Array.from({ length: repetitions }, () => ({ pl: "", de: "", en: "", done: false, flash: false })));
+    if (!current) return;
+    setSteps(buildSteps(current, repetitions));
     focusFirstOnRender.current = true;
   }, [wordIndex, repetitions]);
 
-  // ── Advance to next word when ALL rows are done ──────────────────────────
-  // This runs in the React commit phase (no setTimeout) → iOS keeps keyboard up.
+  // Advance to next word when all steps are done
   useEffect(() => {
-    if (finished) return;
-    if (rows.length === 0 || !rows.every(r => r.done)) return;
+    if (finished || steps.length === 0 || !steps.every(s => s.done)) return;
     const next = wordIndex + 1;
     setCompletedWords(c => c + 1);
     if (next >= words.length) {
@@ -165,77 +138,32 @@ export function TraceTrainer({
       onFinish?.();
     } else {
       setWordIndex(next);
-      // focusFirstOnRender is set by the wordIndex useEffect above
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows]);
+  }, [steps]);
 
   const norm = (s: string) => s.trim().toLowerCase();
 
-  const handleChange = (rowIndex: number, field: Field, value: string) => {
-    if (!current) return;
-    // Read current row directly — safe because this runs synchronously
-    // in the same user-event tick, so `rows` is always current here.
-    if (rows[rowIndex].done) return;
+  const handleChange = (idx: number, value: string) => {
+    if (!current || steps[idx]?.done) return;
+    const step   = steps[idx];
+    const target = getWordValue(current, step.field);
+    const ok     = !!target && norm(value) === norm(target);
 
-    const row = { ...rows[rowIndex], [field]: value };
-
-    const plOk = !current.polish  || norm(row.pl) === norm(current.polish  ?? "");
-    const deOk = !current.german  || norm(row.de) === norm(current.german  ?? "");
-    const enOk = !current.english || norm(row.en) === norm(current.english ?? "");
-
-    const fieldTarget =
-      field === "pl" ? current.polish :
-      field === "de" ? current.german : current.english;
-    const isCurrentCorrect = !!fieldTarget && norm(value) === norm(fieldTarget);
-    const rowWillBeDone    = plOk && deOk && enOk;
-
-    if (rowWillBeDone) {
-      const next = rows.map((r, i) =>
-        i === rowIndex ? { ...row, done: true, flash: true } : r
-      );
-      const allDone = next.every(r => r.done);
-
+    if (ok) {
+      const next   = steps.map((s, i) => i === idx ? { ...s, value, done: true, flash: true } : s);
+      const allDone = next.every(s => s.done);
       if (allDone) {
-        // ── KEY: focus the bridge SYNCHRONOUSLY, BEFORE setRows / any re-render.
-        //    iOS only closes the keyboard when focus falls to null.
-        //    Bridge → (React re-renders, old inputs unmount, new inputs mount) → firstInput
-        //    = unbroken focus chain, keyboard stays open the whole time.
+        // iOS bridge: keep keyboard open through word transition
         bridgeRef.current?.focus();
       } else {
-        const firstUndone = next.findIndex(x => !x.done);
-        pendingFocusId.current = `trace-input-${firstUndone}-${getActiveFields(current)[0]}`;
+        const nextIdx = next.findIndex(s => !s.done);
+        if (nextIdx >= 0) pendingFocusId.current = `trace-step-${nextIdx}`;
       }
-
-      setRows(next);
-      // Clear flash after animation (visual only — word advance is done by useEffect on rows)
-      setTimeout(() => {
-        setRows(r => r.map((x, i) => i === rowIndex ? { ...x, flash: false } : x));
-      }, 400);
-
-    } else if (isCurrentCorrect) {
-      // ── Auto-advance to next field in same row ──
-      const fieldOrder = getActiveFields(current);
-      const fieldIdx   = fieldOrder.indexOf(field);
-      if (fieldIdx < fieldOrder.length - 1) {
-        const nextField  = fieldOrder[fieldIdx + 1];
-        const nextTarget =
-          nextField === "pl" ? current.polish :
-          nextField === "de" ? current.german : current.english;
-        const nextAlreadyOk = !!nextTarget && norm(row[nextField]) === norm(nextTarget);
-        if (!nextAlreadyOk) pendingFocusId.current = `trace-input-${rowIndex}-${nextField}`;
-      } else {
-        // Last field done but row not yet complete → wrap to first unfilled field
-        const firstField  = fieldOrder[0];
-        const firstTarget =
-          firstField === "pl" ? current.polish :
-          firstField === "de" ? current.german : current.english;
-        const firstAlreadyOk = !!firstTarget && norm(row[firstField]) === norm(firstTarget);
-        if (!firstAlreadyOk) pendingFocusId.current = `trace-input-${rowIndex}-${firstField}`;
-      }
-      setRows(rows.map((r, i) => i === rowIndex ? row : r));
+      setSteps(next);
+      setTimeout(() => setSteps(s => s.map((x, i) => i === idx ? { ...x, flash: false } : x)), 400);
     } else {
-      setRows(rows.map((r, i) => i === rowIndex ? row : r));
+      setSteps(steps.map((s, i) => i === idx ? { ...s, value } : s));
     }
   };
 
@@ -251,8 +179,7 @@ export function TraceTrainer({
     else { setCompletedWords(c => c + 1); setWordIndex(next); }
   };
 
-  // ── Empty / Finished ────────────────────────────────────────────────────
-
+  // ── Empty ────────────────────────────────────────────────────────────────
   if (!words.length) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
@@ -263,6 +190,7 @@ export function TraceTrainer({
     );
   }
 
+  // ── Finished ─────────────────────────────────────────────────────────────
   if (finished) {
     return (
       <div className="flex flex-col items-center justify-center py-20 space-y-6 text-center animate-in fade-in zoom-in duration-500">
@@ -270,13 +198,15 @@ export function TraceTrainer({
           <Check className="h-12 w-12" />
         </div>
         <h2 className="text-3xl font-bold font-serif text-primary">Готово!</h2>
-        <p className="text-muted-foreground">{completedWords} слов · {repetitions}× каждое</p>
+        <p className="text-muted-foreground">
+          {completedWords} слов · {repetitions} {repetitions === 1 ? "каток" : repetitions < 5 ? "катка" : "катков"}
+        </p>
         <div className="flex gap-3 flex-wrap justify-center">
           <Button size="lg" variant="outline" onClick={() => {
             setFinished(false);
             setCompletedWords(0);
             setWordIndex(0);
-            setRows(Array.from({ length: repetitions }, () => ({ pl: "", de: "", en: "", done: false, flash: false })));
+            setSteps(words[0] ? buildSteps(words[0], repetitions) : []);
           }}>
             Ещё раз
           </Button>
@@ -287,20 +217,26 @@ export function TraceTrainer({
     );
   }
 
-  if (!current) return null;
+  if (!current || !steps.length) return null;
 
-  const progressPercent = (completedWords / words.length) * 100;
-  const hasPl = !!current.polish;
-  const haDe  = !!current.german;
-  const hasEn = !!current.english;
+  // Roll size: for n fields → forward(n) + backward(n-1) = 2n-1
+  const fields   = getActiveFields(current);
+  const rollSize = fields.length <= 1 ? 1 : fields.length * 2 - 1;
+  const currentStepIdx = steps.findIndex(s => !s.done);
 
-  const translationLine = [current.polish, current.german, current.english]
-    .filter(Boolean)
-    .join(" · ");
+  // ── Shared UI pieces ─────────────────────────────────────────────────────
 
-  // ── Shared elements ─────────────────────────────────────────────────────
+  const bridge = (
+    <input
+      ref={bridgeRef}
+      aria-hidden="true"
+      tabIndex={-1}
+      readOnly
+      style={{ position: "fixed", left: "-9999px", top: "-9999px", width: 1, height: 1, opacity: 0, pointerEvents: "none" }}
+    />
+  );
 
-  const progressBar = <Progress value={progressPercent} className="h-1" />;
+  const progressBar = <Progress value={(completedWords / words.length) * 100} className="h-1" />;
 
   const counter = (
     <div className="text-sm font-semibold bg-secondary/60 px-3 py-1.5 rounded-full flex items-center gap-1 text-primary shrink-0">
@@ -311,8 +247,8 @@ export function TraceTrainer({
   const referenceCard = (
     <div className="py-3 px-3 border rounded-xl bg-muted/30 space-y-1">
       <p className="font-bold font-serif text-2xl leading-tight">{current.russian}</p>
-      <p className="text-sm text-muted-foreground whitespace-nowrap overflow-x-auto scrollbar-none">
-        {translationLine}
+      <p className="text-sm text-muted-foreground overflow-x-auto scrollbar-none">
+        {[current.polish, current.german, current.english].filter(Boolean).join(" · ")}
       </p>
       {current.mnemonic && (
         <p className="text-xs text-primary/50 italic leading-relaxed">{current.mnemonic}</p>
@@ -320,55 +256,86 @@ export function TraceTrainer({
     </div>
   );
 
-  const inputRows = (
-    <div className="space-y-4">
-      {rows.map((row, i) => {
-        const isLocked = !row.done && !rows.slice(0, i).every(r => r.done);
+  // ── Step rows ─────────────────────────────────────────────────────────────
+  const stepsUI = (
+    <div className="space-y-0.5">
+      {steps.map((step, i) => {
+        const isActive = i === currentStepIdx;
+        const isLocked = !step.done && i > currentStepIdx;
+        const hint     = getWordValue(current, step.field);
+
+        // Roll separator before each new roll (except the first)
+        const isRollStart = i > 0 && i % rollSize === 0 && fields.length > 1;
+        const rollNum     = Math.floor(i / rollSize) + 1;
+
         return (
-          <div
-            key={i}
-            className={cn(
-              "flex gap-3 w-full overflow-x-auto scrollbar-none transition-opacity duration-300",
-              row.flash && "success-pulse",
-              isLocked && "opacity-35 pointer-events-none",
+          <div key={i}>
+            {isRollStart && (
+              <div className="flex items-center gap-2 py-2">
+                <div className="flex-1 h-px bg-border/60" />
+                <span className="text-[10px] text-muted-foreground/60 font-mono tracking-widest uppercase">
+                  каток {rollNum}
+                </span>
+                <div className="flex-1 h-px bg-border/60" />
+              </div>
             )}
-          >
-            {hasPl && (
-              <FieldInput
-                ref={i === 0 ? firstInputRef : undefined}
-                id={`trace-input-${i}-pl`}
-                hint={current.polish ?? ""}
-                value={row.pl}
-                onChange={v => handleChange(i, "pl", v)}
-                onFocus={handleInputFocus}
-                done={row.done}
-                lang="pl"
-              />
-            )}
-            {haDe && (
-              <FieldInput
-                ref={i === 0 && !hasPl ? firstInputRef : undefined}
-                id={`trace-input-${i}-de`}
-                hint={current.german ?? ""}
-                value={row.de}
-                onChange={v => handleChange(i, "de", v)}
-                onFocus={handleInputFocus}
-                done={row.done}
-                lang="de"
-              />
-            )}
-            {hasEn && (
-              <FieldInput
-                ref={i === 0 && !hasPl && !haDe ? firstInputRef : undefined}
-                id={`trace-input-${i}-en`}
-                hint={current.english ?? ""}
-                value={row.en}
-                onChange={v => handleChange(i, "en", v)}
-                onFocus={handleInputFocus}
-                done={row.done}
-                lang="en"
-              />
-            )}
+
+            <div
+              className={cn(
+                "flex items-center gap-2 px-2 py-1.5 rounded-lg transition-all duration-200",
+                step.flash  && "success-pulse",
+                isLocked    && "opacity-25 pointer-events-none",
+                isActive    && "bg-primary/5 ring-1 ring-primary/20",
+              )}
+            >
+              {/* Flag / check */}
+              <span className="text-base shrink-0 w-7 text-center select-none leading-none">
+                {step.done ? <Check className="h-4 w-4 text-green-500 mx-auto" /> : FLAG[step.field]}
+              </span>
+
+              {step.done ? (
+                /* Completed: show the typed word */
+                <span className="text-sm text-green-600 dark:text-green-400 font-medium flex-1 font-mono">
+                  {step.value}
+                </span>
+              ) : (
+                /* Active / locked: hint label + auto-sizing input */
+                <div className="flex flex-col flex-1 min-w-0">
+                  <span className="text-[11px] text-muted-foreground/60 font-mono leading-none mb-0.5 truncate select-none">
+                    {hint}
+                  </span>
+                  <div className="inline-grid w-full">
+                    {/* Hidden sizer so input grows with content */}
+                    <span
+                      aria-hidden
+                      className="invisible whitespace-pre text-sm px-0 py-0.5 col-start-1 row-start-1"
+                      style={{ fontFamily: "inherit" }}
+                    >
+                      {step.value || hint || "____"}
+                    </span>
+                    <input
+                      ref={i === 0 ? firstInputRef : undefined}
+                      id={`trace-step-${i}`}
+                      value={step.value}
+                      onChange={e => handleChange(i, e.target.value)}
+                      onFocus={handleInputFocus}
+                      disabled={isLocked || step.done}
+                      lang={LANG[step.field]}
+                      autoComplete="off"
+                      autoCorrect="off"
+                      autoCapitalize="none"
+                      spellCheck={false}
+                      className={cn(
+                        "col-start-1 row-start-1 w-full bg-transparent",
+                        "border-0 border-b-2 rounded-none px-0 py-0.5 text-sm",
+                        "focus:outline-none transition-colors",
+                        isActive ? "border-primary" : "border-border/50",
+                      )}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         );
       })}
@@ -376,32 +343,12 @@ export function TraceTrainer({
   );
 
   const skipButton = (
-    <Button variant="ghost" size="sm" className="text-muted-foreground self-start mt-1" onClick={handleSkip}>
+    <Button variant="ghost" size="sm" className="text-muted-foreground self-center mt-1" onClick={handleSkip}>
       Пропустить <ArrowRight className="ml-1 h-4 w-4" />
     </Button>
   );
 
-  // ── LANDSCAPE: reference LEFT, inputs RIGHT ──────────────────────────────
-  // ── Bridge input: always mounted, offscreen, keeps iOS keyboard alive
-  //    across word transitions (focused synchronously when all rows complete).
-  const bridge = (
-    <input
-      ref={bridgeRef}
-      aria-hidden="true"
-      tabIndex={-1}
-      readOnly
-      style={{
-        position: "fixed",
-        left: "-9999px",
-        top: "-9999px",
-        width: "1px",
-        height: "1px",
-        opacity: 0,
-        pointerEvents: "none",
-      }}
-    />
-  );
-
+  // ── LANDSCAPE ────────────────────────────────────────────────────────────
   if (isLandscape) {
     return (
       <div className="w-full flex flex-col gap-2">
@@ -416,7 +363,7 @@ export function TraceTrainer({
             <div className="min-w-0 text-xs text-muted-foreground">{headerRight}</div>
           </div>
           <div className="flex flex-col gap-3">
-            {inputRows}
+            {stepsUI}
             {skipButton}
           </div>
         </div>
@@ -424,7 +371,7 @@ export function TraceTrainer({
     );
   }
 
-  // ── PORTRAIT: standard vertical ──────────────────────────────────────────
+  // ── PORTRAIT ─────────────────────────────────────────────────────────────
   return (
     <div className="w-full max-w-xl mx-auto flex flex-col gap-4">
       {bridge}
@@ -434,10 +381,8 @@ export function TraceTrainer({
       </div>
       {progressBar}
       {referenceCard}
-      {inputRows}
-      <Button variant="ghost" size="sm" className="text-muted-foreground self-center mt-1" onClick={handleSkip}>
-        Пропустить <ArrowRight className="ml-1 h-4 w-4" />
-      </Button>
+      {stepsUI}
+      {skipButton}
     </div>
   );
 }
