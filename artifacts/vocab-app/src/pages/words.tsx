@@ -593,7 +593,7 @@ export default function Words() {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-3">
+        <div className="divide-y divide-border/50 -mx-4">
           {(wordsData?.words ?? []).filter(w =>
             filterType === "all" ? true :
             filterType === "none" ? !w.wordType :
@@ -602,24 +602,21 @@ export default function Words() {
             ? (a, b) => ((b.hintCount ?? 0) - (b.correctCount ?? 0)) - ((a.hintCount ?? 0) - (a.correctCount ?? 0))
             : () => 0
           ).map(word => (
-            <Card 
-              key={word.id} 
-              className="cursor-pointer hover:border-primary/50 transition-colors bg-card/60 backdrop-blur-sm"
+            <div
+              key={word.id}
+              className="cursor-pointer px-4 py-3 active:bg-muted/40 transition-colors"
               onClick={() => handleOpenEdit(word)}
             >
-              <CardContent className="p-3">
-                {/* Full-width single line: Russian — PL — DE — EN */}
-                <p className="overflow-hidden whitespace-nowrap overflow-ellipsis leading-snug">
-                  <span className="font-bold text-base font-serif">{word.russian}</span>
-                  {word.polish && <span className="text-sm text-muted-foreground"> — {word.polish}</span>}
-                  {word.german && <span className="text-sm text-muted-foreground"> — {word.german}</span>}
-                  {word.english && <span className="text-sm text-muted-foreground"> — {word.english}</span>}
+              <p className="font-bold text-base font-serif leading-snug break-words">{word.russian}</p>
+              {(word.polish || word.german || word.english) && (
+                <p className="text-sm text-muted-foreground mt-0.5 leading-snug break-words">
+                  {[word.polish, word.german, word.english].filter(Boolean).join(" · ")}
                 </p>
-                {word.mnemonic && (
-                  <p className="text-xs text-primary/60 italic mt-0.5 leading-relaxed">{word.mnemonic}</p>
-                )}
-              </CardContent>
-            </Card>
+              )}
+              {word.mnemonic && (
+                <p className="text-xs text-primary/60 italic mt-1 leading-relaxed break-words">{word.mnemonic}</p>
+              )}
+            </div>
           ))}
         </div>
       )}
