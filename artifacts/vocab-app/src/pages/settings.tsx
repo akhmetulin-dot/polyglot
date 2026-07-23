@@ -237,12 +237,11 @@ export default function Settings() {
           </div>
 
           <div className="space-y-3 border-t pt-6">
-            <Label className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Катков за каждое слово</Label>
-            <p className="text-xs text-muted-foreground -mt-2">1 каток = PL→DE→EN→DE→PL (туда и обратно)</p>
+            <Label className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Повторений за каждое слово</Label>
             {(
               [
-                { key: "traceNew" as const, label: "Новые слова", hint: "Больше катков — лучше запоминание" },
-                { key: "traceReview" as const, label: "Слова из Повторения", hint: "Уже частично знакомы — меньше катков" },
+                { key: "traceNew" as const, label: "Новые слова", hint: "Первый раз встречается — пишется больше раз для лучшего запоминания" },
+                { key: "traceReview" as const, label: "Слова из Повторения", hint: "Слова из очереди SRS — уже частично знакомы, меньше повторений" },
                 { key: "traceError" as const, label: "После ошибки в Тесте", hint: "Слово не прошло Тест и вернулось в Прописи" },
                 { key: "traceErrorReview" as const, label: "Ошибка в Повторении", hint: "Ошибка в слове из очереди Повторения — требует тщательного повторения" },
               ] as const
