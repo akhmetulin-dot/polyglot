@@ -164,13 +164,18 @@ export function TraceTrainer({
 
   const current: Word | undefined = words[wordIndex];
 
-  // Reset rows and mnemonic state when word changes
+  // Reset rows when word changes
   useEffect(() => {
     setRows(Array.from({ length: repetitions }, () => ({ pl: "", de: "", en: "", done: false, flash: false })));
-    setLocalMnemonic(undefined);
-    setIsEditingMnemonic(false);
     focusFirstOnRender.current = true;
   }, [wordIndex, repetitions]);
+
+  // Reset mnemonic editing state when the actual word id changes
+  useEffect(() => {
+    setLocalMnemonic(undefined);
+    setIsEditingMnemonic(false);
+    setMnemonicDraft("");
+  }, [current?.id]);
 
   const displayMnemonic = localMnemonic !== undefined ? localMnemonic : current?.mnemonic;
 
@@ -187,13 +192,20 @@ export function TraceTrainer({
       { id: current.id, data: { mnemonic: trimmed ?? undefined } },
       {
         onSuccess: () => {
+          // Update local display immediately — no list invalidation to avoid
+          // causing the parent to refetch and reset the trainer mid-session.
+          // Individual word cache and full list are invalidated when session ends.
           setLocalMnemonic(trimmed);
           setIsEditingMnemonic(false);
-          queryClient.invalidateQueries({ queryKey: getListWordsQueryKey() });
           queryClient.invalidateQueries({ queryKey: getGetWordQueryKey(current.id) });
         },
       }
     );
+  };
+
+  // Invalidate the full word list when the session ends so other screens are in sync.
+  const invalidateListOnFinish = () => {
+    queryClient.invalidateQueries({ queryKey: getListWordsQueryKey() });
   };
 
   // ── Advance to next word when ALL rows are done ──────────────────────────
@@ -204,6 +216,7 @@ export function TraceTrainer({
     setCompletedWords(c => c + 1);
     if (next >= words.length) {
       setFinished(true);
+      invalidateListOnFinish();
       onFinish?.();
     } else {
       setWordIndex(next);
