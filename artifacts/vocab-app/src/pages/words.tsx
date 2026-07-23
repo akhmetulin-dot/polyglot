@@ -1,4 +1,19 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
+
+// Returns the height of the visual viewport (shrinks when iOS keyboard opens)
+function useVisualViewportHeight() {
+  const get = () => window.visualViewport?.height ?? window.innerHeight;
+  const [h, setH] = useState(get);
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const update = () => setH(vv.height);
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    return () => { vv.removeEventListener("resize", update); vv.removeEventListener("scroll", update); };
+  }, []);
+  return h;
+}
 import * as XLSX from "xlsx";
 import { 
   useListWords,
@@ -163,19 +178,7 @@ export default function Words() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  // iOS keyboard fix: when keyboard opens, scroll focused element into view
-  useEffect(() => {
-    const vv = window.visualViewport;
-    if (!vv) return;
-    const onResize = () => {
-      const focused = document.activeElement as HTMLElement | null;
-      if (focused && focused.tagName !== "BODY") {
-        setTimeout(() => focused.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
-      }
-    };
-    vv.addEventListener("resize", onResize);
-    return () => vv.removeEventListener("resize", onResize);
-  }, []);
+  const vvh = useVisualViewportHeight();
 
   const { data: wordsData, isLoading } = useListWords({ 
     search: debouncedSearch || undefined, 
@@ -623,7 +626,10 @@ export default function Words() {
 
       {/* Add / Edit word dialog */}
       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-        <DialogContent className="w-[95vw] max-w-md max-h-[92dvh] overflow-y-auto overscroll-y-contain p-5 top-[2dvh] translate-y-0 sm:top-[50%] sm:translate-y-[-50%]">
+        <DialogContent
+          style={{ maxHeight: `${vvh * 0.94}px` }}
+          className="w-[95vw] max-w-md overflow-y-auto overscroll-y-contain p-5 top-[3%] translate-y-0 sm:top-[50%] sm:translate-y-[-50%]"
+        >
           <DialogHeader>
             <DialogTitle>{editingWord ? "Редактировать слово" : "Новое слово"}</DialogTitle>
           </DialogHeader>
