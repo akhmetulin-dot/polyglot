@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 
 // Returns the height of the visual viewport (shrinks when iOS keyboard opens)
 function useVisualViewportHeight() {
@@ -34,7 +34,6 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Search, Plus, Trash2, Upload, FileSpreadsheet, CheckCircle2, ClipboardPaste, Link2, RotateCcw, History, Languages, Download, X } from "lucide-react";
@@ -158,6 +157,288 @@ function csvRowToWord(row: Record<string, string>) {
   };
 }
 
+// ── WordDialog ─────────────────────────────────────────────────────────────────
+// Owns all form state so typing inside the dialog does NOT re-render the word list.
+function WordDialog({
+  open,
+  onOpenChange,
+  editingWord,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  editingWord: Word | null;
+}) {
+  const vvh = useVisualViewportHeight();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const createWord = useCreateWord();
+  const updateWord = useUpdateWord();
+  const deleteWord = useDeleteWord();
+
+  const emptyForm = () => ({
+    russian: "", polish: "", german: "", english: "",
+    mnemonic: "", frequencyRank: "", wordType: "" as string, wordGroup: "" as string,
+  });
+
+  const [formData, setFormData] = useState(emptyForm());
+  const [isTranslating, setIsTranslating] = useState(false);
+  const set = (patch: Partial<typeof formData>) => setFormData(prev => ({ ...prev, ...patch }));
+
+  // Sync form when the dialog opens (not on every editingWord change to avoid mid-session resets)
+  useEffect(() => {
+    if (!open) return;
+    setFormData(editingWord ? {
+      russian:       editingWord.russian,
+      polish:        editingWord.polish        || "",
+      german:        editingWord.german        || "",
+      english:       editingWord.english       || "",
+      mnemonic:      editingWord.mnemonic      || "",
+      frequencyRank: editingWord.frequencyRank?.toString() || "",
+      wordType:      editingWord.wordType      || "",
+      wordGroup:     editingWord.wordGroup     || "",
+    } : emptyForm());
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  const { data: wordHistory } = useGetWordHistory(editingWord?.id ?? 0, {
+    query: { enabled: !!editingWord?.id && open } as never,
+  });
+
+  const handleTranslate = async () => {
+    const word = formData.russian.trim();
+    if (!word) { toast({ title: "Введите слово на русском", variant: "destructive" }); return; }
+    setIsTranslating(true);
+    try {
+      const resp = await fetch("/api/words/translate", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: word }),
+      });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({})) as Record<string, string>;
+        toast({ title: "Ошибка перевода", description: err.error || resp.statusText, variant: "destructive" });
+        return;
+      }
+      const data = await resp.json() as { polish?: string | null; german?: string | null; english?: string | null };
+      setFormData(prev => ({
+        ...prev,
+        polish:  prev.polish  || data.polish  || "",
+        german:  prev.german  || data.german  || "",
+        english: prev.english || data.english || "",
+      }));
+      toast({ title: "Переводы получены", description: "Заполнены пустые поля. Проверьте при необходимости." });
+    } catch {
+      toast({ title: "Сервис перевода недоступен", variant: "destructive" });
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
+  const handleSave = () => {
+    if (!formData.russian.trim()) {
+      toast({ title: "Ошибка", description: "Слово на русском обязательно", variant: "destructive" });
+      return;
+    }
+    const payload = {
+      russian:       formData.russian.trim(),
+      polish:        formData.polish.trim()   || undefined,
+      german:        formData.german.trim()   || undefined,
+      english:       formData.english.trim()  || undefined,
+      mnemonic:      formData.mnemonic.trim() || undefined,
+      frequencyRank: formData.frequencyRank ? parseInt(formData.frequencyRank, 10) : undefined,
+      wordType:      (formData.wordType || undefined) as "academic" | "everyday" | "mixed" | undefined,
+      wordGroup:     formData.wordGroup.trim() || undefined,
+    };
+    if (editingWord) {
+      updateWord.mutate({ id: editingWord.id, data: payload }, {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getListWordsQueryKey() });
+          onOpenChange(false);
+          toast({ title: "Слово обновлено" });
+        },
+      });
+    } else {
+      createWord.mutate({ data: payload }, {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getListWordsQueryKey() });
+          onOpenChange(false);
+          toast({ title: "Слово добавлено" });
+        },
+      });
+    }
+  };
+
+  const handleDelete = (id: number) => {
+    if (confirm("Переместить в корзину?")) {
+      deleteWord.mutate({ id }, {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getListWordsQueryKey() });
+          onOpenChange(false);
+          toast({ title: "Слово перемещено в корзину" });
+        },
+      });
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        style={{ maxHeight: `${vvh * 0.94}px` }}
+        className="w-[95vw] max-w-md overflow-y-auto overscroll-y-contain p-5 top-[3%] translate-y-0 sm:top-[50%] sm:translate-y-[-50%]"
+      >
+        <DialogHeader>
+          <DialogTitle>{editingWord ? "Редактировать слово" : "Новое слово"}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-3">
+          <div className="space-y-1.5">
+            <Label>Слово на русском <span className="text-destructive">*</span></Label>
+            <div className="flex gap-2">
+              <Input
+                value={formData.russian}
+                onChange={e => set({ russian: e.target.value })}
+                placeholder="Например: дерево"
+                className="font-serif text-lg"
+                lang="ru"
+                autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck={false}
+                autoFocus
+                onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: "smooth", block: "center" }), 350)}
+              />
+              <Button
+                type="button" variant="outline" size="sm"
+                className="shrink-0 h-auto px-3"
+                onClick={handleTranslate}
+                disabled={isTranslating || !formData.russian.trim()}
+                title="Автоматически получить переводы"
+              >
+                {isTranslating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Languages className="h-4 w-4" />}
+              </Button>
+            </div>
+            <p className="text-[10px] text-muted-foreground">
+              Нажмите <Languages className="inline h-3 w-3 mx-0.5" /> чтобы получить переводы автоматически — проверьте и поправьте при необходимости.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs uppercase text-muted-foreground tracking-wider">Polski (PL)</Label>
+              <Input value={formData.polish} onChange={e => set({ polish: e.target.value })}
+                lang="pl" autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck={false}
+                onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: "smooth", block: "center" }), 350)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs uppercase text-muted-foreground tracking-wider">Deutsch (DE)</Label>
+              <Input value={formData.german} onChange={e => set({ german: e.target.value })}
+                lang="de" autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck={false}
+                onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: "smooth", block: "center" }), 350)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs uppercase text-muted-foreground tracking-wider">English (EN)</Label>
+              <Input value={formData.english} onChange={e => set({ english: e.target.value })}
+                lang="en" autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck={false}
+                onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: "smooth", block: "center" }), 350)} />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Ваша подсказка / мнемоника</Label>
+            <Textarea
+              value={formData.mnemonic}
+              onChange={e => set({ mnemonic: e.target.value })}
+              placeholder="Напишите свою подсказку для запоминания..."
+              className="resize-none" rows={3}
+              autoComplete="off" autoCorrect="off" spellCheck={false}
+              onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: "smooth", block: "center" }), 350)}
+            />
+            <p className="text-[11px] text-muted-foreground">Только вы пишете подсказку — она появится при нажатии кнопки «Подсказка» в тренажёре.</p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>Частотность (ранг)</Label>
+              <Input type="number" value={formData.frequencyRank}
+                onChange={e => set({ frequencyRank: e.target.value })}
+                placeholder="Например: 150" autoComplete="off"
+                onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: "smooth", block: "center" }), 350)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Тип слова</Label>
+              <Select value={formData.wordType || "__none__"} onValueChange={v => set({ wordType: v === "__none__" ? "" : v })}>
+                <SelectTrigger><SelectValue placeholder="Не указан" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Не указан</SelectItem>
+                  <SelectItem value="academic">Академическое</SelectItem>
+                  <SelectItem value="everyday">Базовое</SelectItem>
+                  <SelectItem value="mixed">Смешанное</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Смысловая группа</Label>
+            <Input value={formData.wordGroup} onChange={e => set({ wordGroup: e.target.value })}
+              placeholder="Например: движение, эмоции, еда…"
+              autoComplete="off" autoCorrect="off" spellCheck={false}
+              onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: "smooth", block: "center" }), 350)} />
+            <p className="text-[11px] text-muted-foreground">Метка для группировки. Видна в списке рядом со словом.</p>
+          </div>
+
+          {editingWord && wordHistory && wordHistory.events.length > 0 && (
+            <div className="space-y-1.5">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                <History className="h-3.5 w-3.5" /> История ({wordHistory.events.length} событий)
+              </p>
+              <div className="rounded-lg border divide-y text-xs overflow-hidden">
+                {(() => {
+                  const evts = wordHistory.events;
+                  const correct = evts.filter(e => e.eventType === "correct" || e.eventType === "review_correct").length;
+                  const wrong   = evts.filter(e => e.eventType === "wrong"   || e.eventType === "review_wrong").length;
+                  const hints   = evts.filter(e => e.eventType === "hint").length;
+                  return (
+                    <>
+                      <div className="px-3 py-2 flex gap-4 text-muted-foreground">
+                        <span>✅ {correct}</span><span>❌ {wrong}</span><span>💡 {hints}</span>
+                      </div>
+                      {evts.slice(0, 5).map(e => (
+                        <div key={e.id} className="px-3 py-1.5 flex items-center justify-between">
+                          <span className={
+                            e.eventType === "correct" || e.eventType === "review_correct" ? "text-green-600" :
+                            e.eventType === "wrong"   || e.eventType === "review_wrong"   ? "text-red-500"   :
+                            "text-muted-foreground"
+                          }>
+                            {e.eventType === "correct"        ? "верно (новое)"    :
+                             e.eventType === "review_correct" ? "верно (повтор)"   :
+                             e.eventType === "wrong"          ? "ошибка (новое)"   :
+                             e.eventType === "review_wrong"   ? "ошибка (повтор)"  : "подсказка"}
+                          </span>
+                          <span className="text-muted-foreground">сессия {e.sessionNumber}</span>
+                        </div>
+                      ))}
+                    </>
+                  );
+                })()}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <DialogFooter className="flex justify-between items-center w-full pt-2 gap-2">
+          {editingWord
+            ? <Button variant="destructive" size="icon" onClick={() => handleDelete(editingWord.id)}><Trash2 className="h-4 w-4" /></Button>
+            : <div />}
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>Отмена</Button>
+            <Button onClick={handleSave} disabled={createWord.isPending || updateWord.isPending}>
+              {(createWord.isPending || updateWord.isPending)
+                ? <Loader2 className="h-4 w-4 animate-spin" /> : "Сохранить"}
+            </Button>
+          </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── Words page ─────────────────────────────────────────────────────────────────
 export default function Words() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -178,21 +459,14 @@ export default function Words() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const vvh = useVisualViewportHeight();
-
   const { data: wordsData, isLoading } = useListWords({ 
     search: debouncedSearch || undefined, 
     sortBy 
   });
 
-  const createWord = useCreateWord();
-  const updateWord = useUpdateWord();
-  const deleteWord = useDeleteWord();
   const bulkImportWords = useBulkImportWords();
 
   const [isTrashOpen, setIsTrashOpen] = useState(false);
-  const [historyWordId, setHistoryWordId] = useState<number | null>(null);
-  const [isTranslating, setIsTranslating] = useState(false);
   const [isDeletingTrash, setIsDeletingTrash] = useState(false);
 
   const { data: trashedWords, refetch: refetchTrash } = useListTrashedWords({ query: { enabled: isTrashOpen } as never });
@@ -235,19 +509,6 @@ export default function Words() {
     }
   };
 
-  const { data: wordHistory } = useGetWordHistory(historyWordId ?? 0, { query: { enabled: historyWordId !== null } as never });
-
-  const [formData, setFormData] = useState({
-    russian: "",
-    polish: "",
-    german: "",
-    english: "",
-    mnemonic: "",
-    frequencyRank: "",
-    wordType: "" as string,
-    wordGroup: "" as string,
-  });
-
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(e.target.value);
     const val = e.target.value;
@@ -255,75 +516,8 @@ export default function Words() {
     return () => clearTimeout(timer);
   };
 
-  const resetForm = () => {
-    setFormData({ russian: "", polish: "", german: "", english: "", mnemonic: "", frequencyRank: "", wordType: "", wordGroup: "" });
-    setEditingWord(null);
-    setHistoryWordId(null);
-  };
-
-  const handleOpenAdd = () => { resetForm(); setIsAddOpen(true); };
-
-  const handleOpenEdit = (word: Word) => {
-    setFormData({
-      russian: word.russian,
-      polish: word.polish || "",
-      german: word.german || "",
-      english: word.english || "",
-      mnemonic: word.mnemonic || "",
-      frequencyRank: word.frequencyRank?.toString() || "",
-      wordType: word.wordType || "",
-      wordGroup: word.wordGroup || "",
-    });
-    setEditingWord(word);
-    setHistoryWordId(word.id);
-    setIsAddOpen(true);
-  };
-
-  const handleSaveWord = () => {
-    if (!formData.russian.trim()) {
-      toast({ title: "Ошибка", description: "Слово на русском обязательно", variant: "destructive" });
-      return;
-    }
-    const payload = {
-      russian: formData.russian.trim(),
-      polish: formData.polish.trim() || undefined,
-      german: formData.german.trim() || undefined,
-      english: formData.english.trim() || undefined,
-      mnemonic: formData.mnemonic.trim() || undefined,
-      frequencyRank: formData.frequencyRank ? parseInt(formData.frequencyRank, 10) : undefined,
-      wordType: (formData.wordType || undefined) as "academic" | "everyday" | "mixed" | undefined,
-      wordGroup: formData.wordGroup.trim() || undefined,
-    };
-    if (editingWord) {
-      updateWord.mutate({ id: editingWord.id, data: payload }, {
-        onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: getListWordsQueryKey() });
-          setIsAddOpen(false);
-          toast({ title: "Слово обновлено" });
-        }
-      });
-    } else {
-      createWord.mutate({ data: payload }, {
-        onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: getListWordsQueryKey() });
-          setIsAddOpen(false);
-          toast({ title: "Слово добавлено" });
-        }
-      });
-    }
-  };
-
-  const handleDeleteWord = (id: number) => {
-    if (confirm("Переместить в корзину?")) {
-      deleteWord.mutate({ id }, {
-        onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: getListWordsQueryKey() });
-          setIsAddOpen(false);
-          toast({ title: "Слово перемещено в корзину" });
-        }
-      });
-    }
-  };
+  const handleOpenAdd = () => { setEditingWord(null); setIsAddOpen(true); };
+  const handleOpenEdit = (word: Word) => { setEditingWord(word); setIsAddOpen(true); };
 
   const handleRestoreWord = (id: number) => {
     restoreWord.mutate({ id }, {
@@ -332,39 +526,6 @@ export default function Words() {
         toast({ title: "Слово восстановлено" });
       }
     });
-  };
-
-  const handleTranslate = async () => {
-    const word = formData.russian.trim();
-    if (!word) {
-      toast({ title: "Введите слово на русском", variant: "destructive" });
-      return;
-    }
-    setIsTranslating(true);
-    try {
-      const resp = await fetch("/api/words/translate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: word }),
-      });
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({}));
-        toast({ title: "Ошибка перевода", description: (err as any).error || resp.statusText, variant: "destructive" });
-        return;
-      }
-      const data = await resp.json() as { polish?: string | null; german?: string | null; english?: string | null };
-      setFormData(prev => ({
-        ...prev,
-        polish:  prev.polish  || data.polish  || "",
-        german:  prev.german  || data.german  || "",
-        english: prev.english || data.english || "",
-      }));
-      toast({ title: "Переводы получены", description: "Заполнены пустые поля. Проверьте и поправьте при необходимости." });
-    } catch {
-      toast({ title: "Сервис перевода недоступен", variant: "destructive" });
-    } finally {
-      setIsTranslating(false);
-    }
   };
 
   const applyParsedRows = (rows: Record<string, string>[]) => {
@@ -621,197 +782,13 @@ export default function Words() {
         </div>
       )}
 
-      {/* Add / Edit word dialog */}
-      <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-        <DialogContent
-          style={{ maxHeight: `${vvh * 0.94}px` }}
-          className="w-[95vw] max-w-md overflow-y-auto overscroll-y-contain p-5 top-[3%] translate-y-0 sm:top-[50%] sm:translate-y-[-50%]"
-        >
-          <DialogHeader>
-            <DialogTitle>{editingWord ? "Редактировать слово" : "Новое слово"}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-3">
-            <div className="space-y-1.5">
-              <Label>Слово на русском <span className="text-destructive">*</span></Label>
-              <div className="flex gap-2">
-                <Input 
-                  value={formData.russian} 
-                  onChange={e => setFormData({ ...formData, russian: e.target.value })} 
-                  placeholder="Например: дерево"
-                  className="font-serif text-lg"
-                  lang="ru"
-                  autoComplete="off"
-                  autoCorrect="off"
-                  autoCapitalize="none"
-                  spellCheck={false}
-                  autoFocus
-                  onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: "smooth", block: "center" }), 350)}
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="shrink-0 h-auto px-3"
-                  onClick={handleTranslate}
-                  disabled={isTranslating || !formData.russian.trim()}
-                  title="Автоматически получить переводы"
-                >
-                  {isTranslating
-                    ? <Loader2 className="h-4 w-4 animate-spin" />
-                    : <Languages className="h-4 w-4" />}
-                </Button>
-              </div>
-              <p className="text-[10px] text-muted-foreground">Нажмите <Languages className="inline h-3 w-3 mx-0.5" /> чтобы получить переводы автоматически — проверьте и поправьте при необходимости.</p>
-            </div>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs uppercase text-muted-foreground tracking-wider">Polski (PL)</Label>
-                <Input 
-                  value={formData.polish} 
-                  onChange={e => setFormData({ ...formData, polish: e.target.value })}
-                  lang="pl"
-                  autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck={false}
-                  onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: "smooth", block: "center" }), 350)}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs uppercase text-muted-foreground tracking-wider">Deutsch (DE)</Label>
-                <Input 
-                  value={formData.german} 
-                  onChange={e => setFormData({ ...formData, german: e.target.value })}
-                  lang="de"
-                  autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck={false}
-                  onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: "smooth", block: "center" }), 350)}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs uppercase text-muted-foreground tracking-wider">English (EN)</Label>
-                <Input 
-                  value={formData.english} 
-                  onChange={e => setFormData({ ...formData, english: e.target.value })}
-                  lang="en"
-                  autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck={false}
-                  onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: "smooth", block: "center" }), 350)}
-                />
-              </div>
-            </div>
+      {/* Add / Edit word dialog — isolated component, list won't re-render on typing */}
+      <WordDialog
+        open={isAddOpen}
+        onOpenChange={(v) => { setIsAddOpen(v); if (!v) setEditingWord(null); }}
+        editingWord={editingWord}
+      />
 
-            <div className="space-y-1.5">
-              <Label>Ваша подсказка / мнемоника</Label>
-              <Textarea 
-                value={formData.mnemonic} 
-                onChange={e => setFormData({ ...formData, mnemonic: e.target.value })} 
-                placeholder="Напишите свою подсказку для запоминания..."
-                className="resize-none"
-                rows={3}
-                autoComplete="off"
-                autoCorrect="off"
-                spellCheck={false}
-                onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: "smooth", block: "center" }), 350)}
-              />
-              <p className="text-[11px] text-muted-foreground">Только вы пишете подсказку — она появится при нажатии кнопки «Подсказка» в тренажёре.</p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label>Частотность (ранг)</Label>
-                <Input 
-                  type="number" 
-                  value={formData.frequencyRank} 
-                  onChange={e => setFormData({ ...formData, frequencyRank: e.target.value })} 
-                  placeholder="Например: 150"
-                  autoComplete="off"
-                  onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: "smooth", block: "center" }), 350)}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Тип слова</Label>
-                <Select value={formData.wordType || "__none__"} onValueChange={v => setFormData({ ...formData, wordType: v === "__none__" ? "" : v })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Не указан" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">Не указан</SelectItem>
-                    <SelectItem value="academic">Академическое</SelectItem>
-                    <SelectItem value="everyday">Базовое</SelectItem>
-                    <SelectItem value="mixed">Смешанное</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label>Смысловая группа</Label>
-              <Input
-                value={formData.wordGroup}
-                onChange={e => setFormData({ ...formData, wordGroup: e.target.value })}
-                placeholder="Например: движение, эмоции, еда…"
-                autoComplete="off"
-                autoCorrect="off"
-                spellCheck={false}
-                onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: "smooth", block: "center" }), 350)}
-              />
-              <p className="text-[11px] text-muted-foreground">Метка для группировки синонимов и похожих по смыслу слов. Видна в списке рядом со словом.</p>
-            </div>
-
-            {/* Per-word analytics / history */}
-            {editingWord && wordHistory && wordHistory.events.length > 0 && (
-              <div className="space-y-1.5">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                  <History className="h-3.5 w-3.5" /> История ({wordHistory.events.length} событий)
-                </p>
-                <div className="rounded-lg border divide-y text-xs overflow-hidden">
-                  {(() => {
-                    const evts = wordHistory.events;
-                    const correct = evts.filter(e => e.eventType === "correct" || e.eventType === "review_correct").length;
-                    const wrong = evts.filter(e => e.eventType === "wrong" || e.eventType === "review_wrong").length;
-                    const hints = evts.filter(e => e.eventType === "hint").length;
-                    return (
-                      <>
-                        <div className="px-3 py-2 flex gap-4 text-muted-foreground">
-                          <span>✅ {correct}</span>
-                          <span>❌ {wrong}</span>
-                          <span>💡 {hints}</span>
-                        </div>
-                        {evts.slice(0, 5).map(e => (
-                          <div key={e.id} className="px-3 py-1.5 flex items-center justify-between">
-                            <span className={
-                              e.eventType === "correct" || e.eventType === "review_correct" ? "text-green-600" :
-                              e.eventType === "wrong" || e.eventType === "review_wrong" ? "text-red-500" :
-                              "text-muted-foreground"
-                            }>
-                              {e.eventType === "correct" ? "верно (новое)" :
-                               e.eventType === "review_correct" ? "верно (повтор)" :
-                               e.eventType === "wrong" ? "ошибка (новое)" :
-                               e.eventType === "review_wrong" ? "ошибка (повтор)" :
-                               "подсказка"}
-                            </span>
-                            <span className="text-muted-foreground">сессия {e.sessionNumber}</span>
-                          </div>
-                        ))}
-                      </>
-                    );
-                  })()}
-                </div>
-              </div>
-            )}
-          </div>
-          <DialogFooter className="flex justify-between items-center w-full pt-2 gap-2">
-            {editingWord ? (
-              <Button variant="destructive" size="icon" onClick={() => handleDeleteWord(editingWord.id)}>
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            ) : <div />}
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setIsAddOpen(false)}>Отмена</Button>
-              <Button onClick={handleSaveWord} disabled={createWord.isPending || updateWord.isPending}>
-                {(createWord.isPending || updateWord.isPending) ? <Loader2 className="h-4 w-4 animate-spin" /> : "Сохранить"}
-              </Button>
-            </div>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Trash dialog */}
       <Dialog open={isTrashOpen} onOpenChange={setIsTrashOpen}>
