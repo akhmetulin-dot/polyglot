@@ -229,7 +229,7 @@ export default function Settings() {
               <span className="font-bold text-lg text-blue-500">{localSettings.traceSessionSize}</span>
             </div>
             <Slider
-              min={5} max={50} step={1}
+              min={1} max={50} step={1}
               value={[localSettings.traceSessionSize]}
               onValueChange={([val]) => setLocalSettings({ ...localSettings, traceSessionSize: val })}
             />

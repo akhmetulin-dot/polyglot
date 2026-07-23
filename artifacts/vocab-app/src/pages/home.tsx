@@ -55,7 +55,7 @@ export default function Home() {
         </Card>
 
         {/* ── Тест — проверить что запомнил ── */}
-        <Card className="border-border shadow-sm relative overflow-hidden">
+        <Card className="border-border shadow-sm relative overflow-hidden sm:col-span-2">
           <div className="absolute right-0 top-0 opacity-5 pointer-events-none translate-x-4 -translate-y-4">
             <Brain className="w-24 h-24" />
           </div>
@@ -65,37 +65,21 @@ export default function Home() {
               Тест
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="text-2xl font-bold font-serif">Проверить себя</div>
-            {settings && (
-              <p className="text-muted-foreground text-xs">
-                Сессия #{(settings.totalSessions ?? 0) + 1} · до {settings.sessionSize} слов
-              </p>
-            )}
-            <Link href="/train" className="w-full">
-              <Button variant="outline" size="lg" className="w-full" data-testid="button-start-training">
-                Начать тест
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-
-        {/* ── Повторение — SRS ── */}
-        <Card className="border-border shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-muted-foreground text-sm font-medium flex items-center gap-2">
-              <Clock className="h-4 w-4" />
-              Повторение
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold font-serif">{stats.dueForReview}</span>
-              <span className="text-muted-foreground text-sm">слов ждёт</span>
+          <CardContent className="flex items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="text-2xl font-bold font-serif">Проверить себя</div>
+              {settings && (
+                <p className="text-muted-foreground text-xs">
+                  Сессия #{(settings.totalSessions ?? 0) + 1} · до {settings.sessionSize} слов
+                  {stats.dueForReview > 0 && (
+                    <span className="ml-2 text-amber-500 font-medium">· {stats.dueForReview} на повторение</span>
+                  )}
+                </p>
+              )}
             </div>
-            <Link href="/review" className="w-full">
-              <Button variant="outline" size="lg" className="w-full" disabled={stats.dueForReview === 0} data-testid="button-start-review">
-                {stats.dueForReview > 0 ? "Повторить" : "Всё повторено!"}
+            <Link href="/train" className="shrink-0">
+              <Button variant="outline" size="lg" data-testid="button-start-training">
+                Начать тест
               </Button>
             </Link>
           </CardContent>
