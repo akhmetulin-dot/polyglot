@@ -311,7 +311,7 @@ function WordDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         style={{ maxHeight: `${vvh * 0.94}px` }}
-        className="w-[95vw] max-w-md overflow-y-auto overscroll-y-contain p-5 top-[3%] translate-y-0 sm:top-[50%] sm:translate-y-[-50%]"
+        className="w-[95vw] max-w-md overflow-y-auto overscroll-y-contain p-5 top-2 translate-y-0 sm:top-[50%] sm:translate-y-[-50%]"
       >
         <DialogHeader>
           <DialogTitle>{editingWord ? "Редактировать слово" : "Новое слово"}</DialogTitle>
@@ -328,7 +328,6 @@ function WordDialog({
                 lang="ru"
                 autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck={false}
                 autoFocus
-                onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: "smooth", block: "center" }), 350)}
               />
               <Button
                 type="button" variant="outline" size="sm"
@@ -349,20 +348,17 @@ function WordDialog({
             <div className="space-y-1.5">
               <Label className="text-xs uppercase text-muted-foreground tracking-wider">Polski (PL)</Label>
               <Input value={formData.polish} onChange={e => set({ polish: e.target.value })}
-                lang="pl" autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck={false}
-                onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: "smooth", block: "center" }), 350)} />
+                lang="pl" autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck={false} />
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs uppercase text-muted-foreground tracking-wider">Deutsch (DE)</Label>
               <Input value={formData.german} onChange={e => set({ german: e.target.value })}
-                lang="de" autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck={false}
-                onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: "smooth", block: "center" }), 350)} />
+                lang="de" autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck={false} />
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs uppercase text-muted-foreground tracking-wider">English (EN)</Label>
               <Input value={formData.english} onChange={e => set({ english: e.target.value })}
-                lang="en" autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck={false}
-                onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: "smooth", block: "center" }), 350)} />
+                lang="en" autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck={false} />
             </div>
           </div>
 
@@ -374,7 +370,6 @@ function WordDialog({
               placeholder="Напишите свою подсказку для запоминания..."
               className="resize-none" rows={3}
               autoComplete="off" autoCorrect="off" spellCheck={false}
-              onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: "smooth", block: "center" }), 350)}
             />
             <p className="text-[11px] text-muted-foreground">Только вы пишете подсказку — она появится при нажатии кнопки «Подсказка» в тренажёре.</p>
           </div>
@@ -384,8 +379,7 @@ function WordDialog({
               <Label>Частотность (ранг)</Label>
               <Input type="number" value={formData.frequencyRank}
                 onChange={e => set({ frequencyRank: e.target.value })}
-                placeholder="Например: 150" autoComplete="off"
-                onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: "smooth", block: "center" }), 350)} />
+                placeholder="Например: 150" autoComplete="off" />
             </div>
             <div className="space-y-1.5">
               <Label>Тип слова</Label>
@@ -405,8 +399,7 @@ function WordDialog({
             <Label>Смысловая группа</Label>
             <Input value={formData.wordGroup} onChange={e => set({ wordGroup: e.target.value })}
               placeholder="Например: движение, эмоции, еда…"
-              autoComplete="off" autoCorrect="off" spellCheck={false}
-              onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: "smooth", block: "center" }), 350)} />
+              autoComplete="off" autoCorrect="off" spellCheck={false} />
             <p className="text-[11px] text-muted-foreground">Метка для группировки. Видна в списке рядом со словом.</p>
           </div>
 
@@ -565,8 +558,17 @@ export default function Words() {
     return () => clearTimeout(timer);
   };
 
-  // Save scroll position so we can restore it after the dialog closes
+  // Scroll restoration: save position before opening, restore AFTER wordsData refetches
   const savedScrollY = useRef(0);
+  const needsScrollRestore = useRef(false);
+
+  // Fires whenever wordsData updates (including after invalidateQueries from save/delete)
+  useEffect(() => {
+    if (needsScrollRestore.current) {
+      needsScrollRestore.current = false;
+      window.scrollTo({ top: savedScrollY.current, behavior: "instant" });
+    }
+  }, [wordsData]);
 
   const handleOpenAdd = useCallback(() => {
     savedScrollY.current = window.scrollY;
@@ -833,9 +835,14 @@ export default function Words() {
           setIsAddOpen(v);
           if (!v) {
             setEditingWord(null);
-            // Restore scroll position so the user lands back on the word they opened
-            const y = savedScrollY.current;
-            requestAnimationFrame(() => window.scrollTo({ top: y, behavior: "instant" }));
+            needsScrollRestore.current = true;
+            // Fallback: also restore immediately if wordsData didn't change (no save happened)
+            setTimeout(() => {
+              if (needsScrollRestore.current) {
+                needsScrollRestore.current = false;
+                window.scrollTo({ top: savedScrollY.current, behavior: "instant" });
+              }
+            }, 50);
           }
         }}
         editingWord={editingWord}
