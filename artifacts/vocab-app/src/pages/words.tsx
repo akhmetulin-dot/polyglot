@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback, memo } from "react";
 
 // Returns the height of the visual viewport (shrinks when iOS keyboard opens)
 function useVisualViewportHeight() {
@@ -156,6 +156,34 @@ function csvRowToWord(row: Record<string, string>) {
     frequencyRank: isNaN(frequencyRank as number) ? undefined : frequencyRank,
   };
 }
+
+// ── WordRow ────────────────────────────────────────────────────────────────────
+// memo() means this row only re-renders when its own word data changes,
+// NOT when any parent state (filters, search, dialog open/close) changes.
+const WordRow = memo(function WordRow({
+  word,
+  onClick,
+}: {
+  word: Word;
+  onClick: (w: Word) => void;
+}) {
+  return (
+    <div
+      className="cursor-pointer px-4 py-3 active:bg-muted/40 transition-colors"
+      onClick={() => onClick(word)}
+    >
+      <p className="font-bold text-base font-serif leading-snug break-words">{word.russian}</p>
+      {(word.polish || word.german || word.english) && (
+        <p className="text-sm text-muted-foreground mt-0.5 leading-snug break-words">
+          {[word.polish, word.german, word.english].filter(Boolean).join(" · ")}
+        </p>
+      )}
+      {word.mnemonic && (
+        <p className="text-xs text-primary/60 italic mt-1 leading-relaxed break-words">{word.mnemonic}</p>
+      )}
+    </div>
+  );
+});
 
 // ── WordDialog ─────────────────────────────────────────────────────────────────
 // Owns all form state so typing inside the dialog does NOT re-render the word list.
@@ -466,9 +494,24 @@ export default function Words() {
   });
 
   // Unique word groups from current data — shown in the group filter dropdown
-  const availableGroups = Array.from(
-    new Set((wordsData?.words ?? []).map(w => w.wordGroup).filter(Boolean) as string[])
-  ).sort((a, b) => a.localeCompare(b, "ru"));
+  const availableGroups = useMemo(() =>
+    Array.from(
+      new Set((wordsData?.words ?? []).map(w => w.wordGroup).filter(Boolean) as string[])
+    ).sort((a, b) => a.localeCompare(b, "ru")),
+  [wordsData?.words]);
+
+  // Filtered + sorted word list — only recomputed when data or filters change
+  const filteredWords = useMemo(() =>
+    (wordsData?.words ?? [])
+      .filter(w =>
+        (filterType === "all" ? true : filterType === "none" ? !w.wordType : w.wordType === filterType) &&
+        (filterGroup === "all" ? true : w.wordGroup === filterGroup)
+      )
+      .sort(sortDifficult
+        ? (a, b) => ((b.hintCount ?? 0) - (b.correctCount ?? 0)) - ((a.hintCount ?? 0) - (a.correctCount ?? 0))
+        : () => 0
+      ),
+  [wordsData?.words, filterType, filterGroup, sortDifficult]);
 
   const bulkImportWords = useBulkImportWords();
 
@@ -522,8 +565,20 @@ export default function Words() {
     return () => clearTimeout(timer);
   };
 
-  const handleOpenAdd = () => { setEditingWord(null); setIsAddOpen(true); };
-  const handleOpenEdit = (word: Word) => { setEditingWord(word); setIsAddOpen(true); };
+  // Save scroll position so we can restore it after the dialog closes
+  const savedScrollY = useRef(0);
+
+  const handleOpenAdd = useCallback(() => {
+    savedScrollY.current = window.scrollY;
+    setEditingWord(null);
+    setIsAddOpen(true);
+  }, []);
+
+  const handleOpenEdit = useCallback((word: Word) => {
+    savedScrollY.current = window.scrollY;
+    setEditingWord(word);
+    setIsAddOpen(true);
+  }, []);
 
   const handleRestoreWord = (id: number) => {
     restoreWord.mutate({ id }, {
@@ -645,14 +700,10 @@ export default function Words() {
           <div className="flex items-baseline gap-3">
           <h1 className="text-2xl sm:text-3xl font-bold font-serif text-foreground">Словарь</h1>
           {wordsData && (() => {
-            const filtered = wordsData.words.filter(w =>
-              (filterType === "all" ? true : filterType === "none" ? !w.wordType : w.wordType === filterType) &&
-              (filterGroup === "all" ? true : w.wordGroup === filterGroup)
-            ).length;
             const showFilter = filterType !== "all" || filterGroup !== "all" || !!debouncedSearch;
             return (
               <span className="text-sm text-muted-foreground font-mono">
-                {showFilter && (filterType !== "all" || filterGroup !== "all") ? `${filtered} / ` : ""}{wordsData.total} сл.
+                {showFilter && (filterType !== "all" || filterGroup !== "all") ? `${filteredWords.length} / ` : ""}{wordsData.total} сл.
               </span>
             );
           })()}
@@ -758,10 +809,7 @@ export default function Words() {
         <div className="flex py-20 items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
-      ) : (wordsData?.words.filter(w =>
-            (filterType === "all" ? true : filterType === "none" ? !w.wordType : w.wordType === filterType) &&
-            (filterGroup === "all" ? true : w.wordGroup === filterGroup)
-          ).length === 0 && (filterType !== "all" || filterGroup !== "all")) ? (
+      ) : (filteredWords.length === 0 && (filterType !== "all" || filterGroup !== "all")) ? (
         <div className="text-center py-12 text-muted-foreground">Нет слов с этим фильтром</div>
       ) : wordsData?.words.length === 0 ? (
         <Card className="border-dashed border-2 bg-transparent text-center py-12">
@@ -772,28 +820,8 @@ export default function Words() {
         </Card>
       ) : (
         <div className="divide-y divide-border/50 -mx-4">
-          {(wordsData?.words ?? []).filter(w =>
-            (filterType === "all" ? true : filterType === "none" ? !w.wordType : w.wordType === filterType) &&
-            (filterGroup === "all" ? true : w.wordGroup === filterGroup)
-          ).sort(sortDifficult
-            ? (a, b) => ((b.hintCount ?? 0) - (b.correctCount ?? 0)) - ((a.hintCount ?? 0) - (a.correctCount ?? 0))
-            : () => 0
-          ).map(word => (
-            <div
-              key={word.id}
-              className="cursor-pointer px-4 py-3 active:bg-muted/40 transition-colors"
-              onClick={() => handleOpenEdit(word)}
-            >
-              <p className="font-bold text-base font-serif leading-snug break-words">{word.russian}</p>
-              {(word.polish || word.german || word.english) && (
-                <p className="text-sm text-muted-foreground mt-0.5 leading-snug break-words">
-                  {[word.polish, word.german, word.english].filter(Boolean).join(" · ")}
-                </p>
-              )}
-              {word.mnemonic && (
-                <p className="text-xs text-primary/60 italic mt-1 leading-relaxed break-words">{word.mnemonic}</p>
-              )}
-            </div>
+          {filteredWords.map(word => (
+            <WordRow key={word.id} word={word} onClick={handleOpenEdit} />
           ))}
         </div>
       )}
@@ -801,7 +829,15 @@ export default function Words() {
       {/* Add / Edit word dialog — isolated component, list won't re-render on typing */}
       <WordDialog
         open={isAddOpen}
-        onOpenChange={(v) => { setIsAddOpen(v); if (!v) setEditingWord(null); }}
+        onOpenChange={(v) => {
+          setIsAddOpen(v);
+          if (!v) {
+            setEditingWord(null);
+            // Restore scroll position so the user lands back on the word they opened
+            const y = savedScrollY.current;
+            requestAnimationFrame(() => window.scrollTo({ top: y, behavior: "instant" }));
+          }
+        }}
         editingWord={editingWord}
       />
 
