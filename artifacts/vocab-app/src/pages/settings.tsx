@@ -8,7 +8,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Slider } from "@/components/ui/slider";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Loader2, RefreshCcw, Upload } from "lucide-react";
+import { Loader2, Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 // ── Minimal slider row ────────────────────────────────────────────────────────
@@ -233,23 +233,8 @@ export default function Settings() {
       </div>
 
       {/* Сохранить */}
-      <div className="fixed bottom-0 left-0 right-0 flex gap-3 px-4 py-4 bg-background/95 backdrop-blur-sm border-t border-border/50">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-muted-foreground"
-          onClick={() => setLocal({
-            errorRepeatAfter: 5, sessionSize: 20, reviewSessionSize: 20,
-            traceSessionSize: 10, reviewIntervals: "3, 5, 9, 13",
-            traceNew: 3, traceReview: 2, traceError: 5, traceErrorReview: 5,
-            appName: local.appName,
-          })}
-          disabled={updateSettings.isPending}
-        >
-          <RefreshCcw className="h-3.5 w-3.5 mr-1.5" />
-          Сброс
-        </Button>
-        <Button className="flex-1" onClick={handleSave} disabled={updateSettings.isPending}>
+      <div className="fixed bottom-0 left-0 right-0 px-4 py-4 bg-background/95 backdrop-blur-sm border-t border-border/50">
+        <Button className="w-full" onClick={handleSave} disabled={updateSettings.isPending}>
           {updateSettings.isPending
             ? <Loader2 className="h-4 w-4 animate-spin" />
             : "Сохранить"}
