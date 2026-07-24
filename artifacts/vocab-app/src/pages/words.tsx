@@ -188,20 +188,28 @@ const WordRow = memo(function WordRow({
       {word.mnemonic && (
         <p className="text-xs text-primary/60 italic mt-1 leading-relaxed break-words whitespace-pre-wrap">{word.mnemonic}</p>
       )}
-      {(word.wordGroup || word.semanticGroup) && (
-        <div className="flex gap-1.5 mt-1.5 flex-wrap">
-          {word.wordGroup && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 leading-none">
-              {MNEMONIC_GROUP.emoji} {word.wordGroup}
-            </span>
-          )}
-          {word.semanticGroup && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400 leading-none">
-              {SEMANTIC_GROUP.emoji} {word.semanticGroup}
-            </span>
-          )}
-        </div>
-      )}
+      <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+        {word.wordGroup && (
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 leading-none">
+            {MNEMONIC_GROUP.emoji} {word.wordGroup}
+          </span>
+        )}
+        {word.semanticGroup && (
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400 leading-none">
+            {SEMANTIC_GROUP.emoji} {word.semanticGroup}
+          </span>
+        )}
+        {/* Trace count badge — always shown so user can see which words need more practice */}
+        <span className={`text-[10px] px-1.5 py-0.5 rounded leading-none ml-auto ${
+          (word.traceCount ?? 0) === 0
+            ? "bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400"
+            : (word.traceCount ?? 0) < 5
+            ? "bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400"
+            : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+        }`}>
+          ✍️ {word.traceCount ?? 0}
+        </span>
+      </div>
     </div>
   );
 });
@@ -579,6 +587,7 @@ export default function Words() {
   const [filterGroup, setFilterGroup] = useState<string>("all");         // мнемоническая группа
   const [filterSemanticGroup, setFilterSemanticGroup] = useState<string>("all"); // смысловая группа
   const [sortDifficult, setSortDifficult] = useState(false);
+  const [sortTrace, setSortTrace] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingWord, setEditingWord] = useState<Word | null>(null);
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
@@ -618,11 +627,13 @@ export default function Words() {
         (filterGroup === "all" ? true : w.wordGroup === filterGroup) &&
         (filterSemanticGroup === "all" ? true : w.semanticGroup === filterSemanticGroup)
       )
-      .sort(sortDifficult
+      .sort(sortTrace
+        ? (a, b) => (a.traceCount ?? 0) - (b.traceCount ?? 0)
+        : sortDifficult
         ? (a, b) => ((b.hintCount ?? 0) - (b.correctCount ?? 0)) - ((a.hintCount ?? 0) - (a.correctCount ?? 0))
         : () => 0
       ),
-  [wordsData?.words, filterType, filterGroup, filterSemanticGroup, sortDifficult]);
+  [wordsData?.words, filterType, filterGroup, filterSemanticGroup, sortDifficult, sortTrace]);
 
   const bulkImportWords = useBulkImportWords();
 
@@ -911,10 +922,11 @@ export default function Words() {
           </Select>
         )}
         <Select
-          value={sortDifficult ? "difficult" : sortBy}
+          value={sortTrace ? "trace" : sortDifficult ? "difficult" : sortBy}
           onValueChange={(val) => {
-            if (val === "difficult") { setSortDifficult(true); }
-            else { setSortDifficult(false); setSortBy(val as ListWordsSortBy); }
+            if (val === "difficult") { setSortTrace(false); setSortDifficult(true); }
+            else if (val === "trace") { setSortDifficult(false); setSortTrace(true); }
+            else { setSortDifficult(false); setSortTrace(false); setSortBy(val as ListWordsSortBy); }
           }}
         >
           <SelectTrigger className="sm:w-[160px]">
@@ -925,6 +937,7 @@ export default function Words() {
             <SelectItem value={ListWordsSortBy.createdAt}>Сначала новые</SelectItem>
             <SelectItem value={ListWordsSortBy.russian}>По алфавиту (RU)</SelectItem>
             <SelectItem value="difficult">Сложные первыми</SelectItem>
+            <SelectItem value="trace">✍️ Меньше прописанные</SelectItem>
           </SelectContent>
         </Select>
       </div>
