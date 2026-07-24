@@ -518,8 +518,17 @@ export function TraceTrainer({
     <div className="space-y-4">
       {rows.map((row, i) => {
         const isLocked = !row.done && !rows.slice(0, i).every(r => r.done);
-        // First field to focus for this row (PL for even, EN for odd)
-        const rowFirstField = getRowFields(i, current)[0];
+        // Ordered fields for this row: even → PL DE EN, odd → EN DE PL (каток)
+        const rowFields = getRowFields(i, current);
+        const rowFirstField = rowFields[0];
+
+        const fieldConfig: Record<Field, { hint: string; value: string; lang: string }> = {
+          pl: { hint: current.polish  ?? "", value: row.pl, lang: "pl" },
+          de: { hint: current.german  ?? "", value: row.de, lang: "de" },
+          en: { hint: current.english ?? "", value: row.en, lang: "en" },
+        };
+        const fieldActive: Record<Field, boolean> = { pl: hasPl, de: haDe, en: hasEn };
+
         return (
           <div
             key={i}
@@ -529,42 +538,19 @@ export function TraceTrainer({
               isLocked && "opacity-35 pointer-events-none",
             )}
           >
-            {hasPl && (
+            {rowFields.filter(f => fieldActive[f]).map(f => (
               <FieldInput
-                ref={i === 0 && rowFirstField === "pl" ? firstInputRef : undefined}
-                id={`trace-input-${i}-pl`}
-                hint={current.polish ?? ""}
-                value={row.pl}
-                onChange={v => handleChange(i, "pl", v)}
+                key={f}
+                ref={i === 0 && f === rowFirstField ? firstInputRef : undefined}
+                id={`trace-input-${i}-${f}`}
+                hint={fieldConfig[f].hint}
+                value={fieldConfig[f].value}
+                onChange={v => handleChange(i, f, v)}
                 onFocus={handleInputFocus}
                 done={row.done}
-                lang="pl"
+                lang={fieldConfig[f].lang}
               />
-            )}
-            {haDe && (
-              <FieldInput
-                ref={i === 0 && rowFirstField === "de" ? firstInputRef : undefined}
-                id={`trace-input-${i}-de`}
-                hint={current.german ?? ""}
-                value={row.de}
-                onChange={v => handleChange(i, "de", v)}
-                onFocus={handleInputFocus}
-                done={row.done}
-                lang="de"
-              />
-            )}
-            {hasEn && (
-              <FieldInput
-                ref={i === 0 && rowFirstField === "en" ? firstInputRef : undefined}
-                id={`trace-input-${i}-en`}
-                hint={current.english ?? ""}
-                value={row.en}
-                onChange={v => handleChange(i, "en", v)}
-                onFocus={handleInputFocus}
-                done={row.done}
-                lang="en"
-              />
-            )}
+            ))}
           </div>
         );
       })}
