@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect, useMemo, useCallback, memo } from "react";
 import { MNEMONIC_GROUP, SEMANTIC_GROUP } from "@/lib/field-meta";
+import { GroupCombobox } from "@/components/group-combobox";
+import { TagsManagerDialog } from "@/components/tags-manager";
 
 // Returns the height of the visual viewport (shrinks when iOS keyboard opens)
 function useVisualViewportHeight() {
@@ -25,7 +27,10 @@ import {
   useUpdateWord,
   useDeleteWord,
   useBulkImportWords,
+  useListTags,
+  useCreateTag,
   getListWordsQueryKey,
+  getListTagsQueryKey,
   Word,
   ListWordsSortBy
 } from "@workspace/api-client-react";
@@ -40,7 +45,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Search, Plus, Trash2, Upload, FileSpreadsheet, CheckCircle2, ClipboardPaste, Link2, RotateCcw, History, Languages, Download, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-const WORD_TYPE_LABELS: Record<string, string> = {
+// Fallback labels for word types not yet in custom_tags (used during initial load)
+const WORD_TYPE_FALLBACK: Record<string, string> = {
   academic: "Академическое",
   everyday: "Базовое",
   mixed: "Смешанное",
@@ -217,6 +223,14 @@ function WordDialog({
   const createWord = useCreateWord();
   const updateWord = useUpdateWord();
   const deleteWord = useDeleteWord();
+  const createTag  = useCreateTag();
+
+  // Tag lists for each kind
+  const { data: wordTypeTags }    = useListTags({ kind: "word_type" },     { query: { enabled: open } as never });
+  const { data: mnemoGroupTags }  = useListTags({ kind: "mnemonic_group" },{ query: { enabled: open } as never });
+  const { data: semanticGroupTags}= useListTags({ kind: "semantic_group" },{ query: { enabled: open } as never });
+
+  const [managerOpen, setManagerOpen] = useState<"word_type" | "mnemonic_group" | "semantic_group" | null>(null);
 
   const emptyForm = () => ({
     russian: "", polish: "", german: "", english: "",
@@ -278,11 +292,32 @@ function WordDialog({
     }
   };
 
+  // Ensure a new group value exists in custom_tags (fire-and-forget)
+  const ensureTag = (kind: string, value: string, existingTags: { value: string }[]) => {
+    if (!value.trim()) return;
+    const exists = existingTags.some(t => t.value.toLowerCase() === value.trim().toLowerCase());
+    if (!exists) {
+      createTag.mutate(
+        { data: { kind, value: value.trim(), label: value.trim() } },
+        {
+          onSuccess: () => queryClient.invalidateQueries({ queryKey: getListTagsQueryKey({ kind }) }),
+        }
+      );
+    }
+  };
+
   const handleSave = () => {
     if (!formData.russian.trim()) {
       toast({ title: "Ошибка", description: "Слово на русском обязательно", variant: "destructive" });
       return;
     }
+    const wordGroup     = formData.wordGroup.trim()     || undefined;
+    const semanticGroup = formData.semanticGroup.trim() || undefined;
+
+    // Auto-create new group tags if user typed something not yet in the list
+    if (wordGroup)     ensureTag("mnemonic_group", wordGroup,     mnemoGroupTags?.tags ?? []);
+    if (semanticGroup) ensureTag("semantic_group", semanticGroup, semanticGroupTags?.tags ?? []);
+
     const payload = {
       russian:       formData.russian.trim(),
       polish:        formData.polish.trim()   || undefined,
@@ -290,9 +325,9 @@ function WordDialog({
       english:       formData.english.trim()  || undefined,
       mnemonic:      formData.mnemonic.trim() || undefined,
       frequencyRank: formData.frequencyRank ? parseInt(formData.frequencyRank, 10) : undefined,
-      wordType:      (formData.wordType || undefined) as "academic" | "everyday" | "mixed" | undefined,
-      wordGroup:     formData.wordGroup.trim()     || undefined,
-      semanticGroup: formData.semanticGroup.trim() || undefined,
+      wordType:      formData.wordType || undefined,
+      wordGroup,
+      semanticGroup,
     };
     if (editingWord) {
       updateWord.mutate({ id: editingWord.id, data: payload }, {
@@ -401,33 +436,56 @@ function WordDialog({
             </div>
             <div className="space-y-1.5">
               <Label>Тип слова</Label>
-              <Select value={formData.wordType || "__none__"} onValueChange={v => set({ wordType: v === "__none__" ? "" : v })}>
-                <SelectTrigger><SelectValue placeholder="Не указан" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">Не указан</SelectItem>
-                  <SelectItem value="academic">Академическое</SelectItem>
-                  <SelectItem value="everyday">Базовое</SelectItem>
-                  <SelectItem value="mixed">Смешанное</SelectItem>
-                </SelectContent>
-              </Select>
+              <GroupCombobox
+                value={formData.wordType}
+                onChange={v => set({ wordType: v })}
+                tags={wordTypeTags?.tags ?? []}
+                placeholder="Не указан"
+                useLabel={true}
+                onManage={() => { setManagerOpen("word_type"); }}
+              />
             </div>
           </div>
 
           <div className="space-y-1.5">
             <Label>{MNEMONIC_GROUP.labelFull}</Label>
-            <Input value={formData.wordGroup} onChange={e => set({ wordGroup: e.target.value })}
+            <GroupCombobox
+              value={formData.wordGroup}
+              onChange={v => set({ wordGroup: v })}
+              tags={mnemoGroupTags?.tags ?? []}
               placeholder={MNEMONIC_GROUP.placeholder}
-              autoComplete="off" autoCorrect="off" spellCheck={false} />
+              emoji={MNEMONIC_GROUP.emoji}
+              onManage={() => setManagerOpen("mnemonic_group")}
+            />
             <p className="text-[11px] text-muted-foreground">{MNEMONIC_GROUP.hint}</p>
           </div>
 
           <div className="space-y-1.5">
             <Label>{SEMANTIC_GROUP.labelFull}</Label>
-            <Input value={formData.semanticGroup} onChange={e => set({ semanticGroup: e.target.value })}
+            <GroupCombobox
+              value={formData.semanticGroup}
+              onChange={v => set({ semanticGroup: v })}
+              tags={semanticGroupTags?.tags ?? []}
               placeholder={SEMANTIC_GROUP.placeholder}
-              autoComplete="off" autoCorrect="off" spellCheck={false} />
+              emoji={SEMANTIC_GROUP.emoji}
+              onManage={() => setManagerOpen("semantic_group")}
+            />
             <p className="text-[11px] text-muted-foreground">{SEMANTIC_GROUP.hint}</p>
           </div>
+
+          {/* Прописи count */}
+          {editingWord && (editingWord.traceCount ?? 0) > 0 && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="text-lg">✍️</span>
+              <span>Прописано <strong className="text-foreground">{editingWord.traceCount}</strong> раз</span>
+            </div>
+          )}
+          {editingWord && (editingWord.traceCount ?? 0) === 0 && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="text-lg">✍️</span>
+              <span>Ещё не прописывалось</span>
+            </div>
+          )}
 
           {editingWord && wordHistory && wordHistory.events.length > 0 && (
             <div className="space-y-1.5">
@@ -481,7 +539,60 @@ function WordDialog({
           </div>
         </DialogFooter>
       </DialogContent>
+
+      {/* Tag manager dialogs */}
+      <TagsManagerDialog
+        open={managerOpen === "word_type"}
+        onOpenChange={v => setManagerOpen(v ? "word_type" : null)}
+        kind="word_type"
+        title="Типы слов"
+        description="Переименуйте или добавьте новые типы. Существующие слова не изменятся."
+        separateValueLabel
+      />
+      <TagsManagerDialog
+        open={managerOpen === "mnemonic_group"}
+        onOpenChange={v => setManagerOpen(v ? "mnemonic_group" : null)}
+        kind="mnemonic_group"
+        title={MNEMONIC_GROUP.labelPlural}
+        emoji={MNEMONIC_GROUP.emoji}
+        description={MNEMONIC_GROUP.hint}
+      />
+      <TagsManagerDialog
+        open={managerOpen === "semantic_group"}
+        onOpenChange={v => setManagerOpen(v ? "semantic_group" : null)}
+        kind="semantic_group"
+        title={SEMANTIC_GROUP.labelPlural}
+        emoji={SEMANTIC_GROUP.emoji}
+        description={SEMANTIC_GROUP.hint}
+      />
     </Dialog>
+  );
+}
+
+// ── WordTypeFilterSelect — loads word_type tags and builds the filter dropdown ─
+function WordTypeFilterSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const { data } = useListTags({ kind: "word_type" });
+  const tags = data?.tags ?? [];
+  // Merge custom tags with fallback legacy values
+  const allValues = [
+    ...tags.map(t => ({ value: t.value, label: t.label })),
+    ...Object.entries(WORD_TYPE_FALLBACK)
+      .filter(([v]) => !tags.some(t => t.value === v))
+      .map(([v, label]) => ({ value: v, label })),
+  ];
+  return (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger className="sm:w-[150px]">
+        <SelectValue placeholder="Тип" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="all">Все типы</SelectItem>
+        {allValues.map(({ value: v, label }) => (
+          <SelectItem key={v} value={v}>{label}</SelectItem>
+        ))}
+        <SelectItem value="none">Без типа</SelectItem>
+      </SelectContent>
+    </Select>
   );
 }
 
@@ -797,18 +908,7 @@ export default function Words() {
             </button>
           ) : null}
         </div>
-        <Select value={filterType} onValueChange={setFilterType}>
-          <SelectTrigger className="sm:w-[150px]">
-            <SelectValue placeholder="Тип" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Все типы</SelectItem>
-            <SelectItem value="academic">Академические</SelectItem>
-            <SelectItem value="everyday">Базовые</SelectItem>
-            <SelectItem value="mixed">Смешанные</SelectItem>
-            <SelectItem value="none">Без типа</SelectItem>
-          </SelectContent>
-        </Select>
+        <WordTypeFilterSelect value={filterType} onChange={setFilterType} />
         {availableGroups.length > 0 && (
           <Select value={filterGroup} onValueChange={setFilterGroup}>
             <SelectTrigger className="sm:w-[170px]">

@@ -29,6 +29,7 @@ export const ListWordsQueryParams = zod.object({
 
 export const listWordsResponseWordsItemPriorityDefault = 0;
 export const listWordsResponseWordsItemConsecutiveCorrectDefault = 0;
+export const listWordsResponseWordsItemTraceCountDefault = 0;
 
 export const ListWordsResponse = zod.object({
   "words": zod.array(zod.object({
@@ -44,11 +45,12 @@ export const ListWordsResponse = zod.object({
   "nextReviewAt": zod.coerce.date().nullish().describe('Marker - null means new word, non-null means in SRS queue'),
   "nextReviewSession": zod.number().nullish().describe('Global session number when this word is next due for review'),
   "reviewInterval": zod.number().optional().describe('Number of times reviewed correctly (index into intervals array)'),
-  "wordType": zod.union([zod.literal('academic'),zod.literal('everyday'),zod.literal('mixed'),zod.literal(null)]).nullish().describe('Usage context of the word'),
+  "wordType": zod.string().nullish().describe('Usage context of the word (any custom tag value)'),
   "wordGroup": zod.string().nullish().describe('Mnemonic group label — words sharing the same memory technique\/image'),
   "semanticGroup": zod.string().nullish().describe('Semantic group label — synonyms \/ words interchangeable in context'),
   "priority": zod.number().default(listWordsResponseWordsItemPriorityDefault).describe('Priority for Прописи ordering (0 = normal, 1 = high — words that were answered wrong)'),
   "consecutiveCorrect": zod.number().default(listWordsResponseWordsItemConsecutiveCorrectDefault).describe('Consecutive correct SRS answers — resets to 0 on wrong answer'),
+  "traceCount": zod.number().default(listWordsResponseWordsItemTraceCountDefault).describe('How many times this word has been completed in Прописи (trace) sessions'),
   "graduatedAt": zod.coerce.date().nullish().describe('When set — word is fully learned and removed from active review rotation'),
   "deletedAt": zod.coerce.date().nullish().describe('Soft-delete timestamp; null means active, non-null means in trash'),
   "createdAt": zod.coerce.date()
@@ -70,13 +72,14 @@ export const CreateWordBody = zod.object({
   "english": zod.string().optional(),
   "mnemonic": zod.string().optional(),
   "frequencyRank": zod.number().optional(),
-  "wordType": zod.enum(['academic', 'everyday', 'mixed']).optional(),
+  "wordType": zod.string().optional().describe('Word type value (any custom tag value)'),
   "wordGroup": zod.string().optional().describe('Mnemonic group label'),
   "semanticGroup": zod.string().optional().describe('Semantic group label (synonyms \/ interchangeable words)')
 })
 
 export const createWordResponsePriorityDefault = 0;
 export const createWordResponseConsecutiveCorrectDefault = 0;
+export const createWordResponseTraceCountDefault = 0;
 
 export const CreateWordResponse = zod.object({
   "id": zod.number(),
@@ -91,11 +94,12 @@ export const CreateWordResponse = zod.object({
   "nextReviewAt": zod.coerce.date().nullish().describe('Marker - null means new word, non-null means in SRS queue'),
   "nextReviewSession": zod.number().nullish().describe('Global session number when this word is next due for review'),
   "reviewInterval": zod.number().optional().describe('Number of times reviewed correctly (index into intervals array)'),
-  "wordType": zod.union([zod.literal('academic'),zod.literal('everyday'),zod.literal('mixed'),zod.literal(null)]).nullish().describe('Usage context of the word'),
+  "wordType": zod.string().nullish().describe('Usage context of the word (any custom tag value)'),
   "wordGroup": zod.string().nullish().describe('Mnemonic group label — words sharing the same memory technique\/image'),
   "semanticGroup": zod.string().nullish().describe('Semantic group label — synonyms \/ words interchangeable in context'),
   "priority": zod.number().default(createWordResponsePriorityDefault).describe('Priority for Прописи ordering (0 = normal, 1 = high — words that were answered wrong)'),
   "consecutiveCorrect": zod.number().default(createWordResponseConsecutiveCorrectDefault).describe('Consecutive correct SRS answers — resets to 0 on wrong answer'),
+  "traceCount": zod.number().default(createWordResponseTraceCountDefault).describe('How many times this word has been completed in Прописи (trace) sessions'),
   "graduatedAt": zod.coerce.date().nullish().describe('When set — word is fully learned and removed from active review rotation'),
   "deletedAt": zod.coerce.date().nullish().describe('Soft-delete timestamp; null means active, non-null means in trash'),
   "createdAt": zod.coerce.date()
@@ -111,6 +115,7 @@ export const GetWordParams = zod.object({
 
 export const getWordResponsePriorityDefault = 0;
 export const getWordResponseConsecutiveCorrectDefault = 0;
+export const getWordResponseTraceCountDefault = 0;
 
 export const GetWordResponse = zod.object({
   "id": zod.number(),
@@ -125,11 +130,12 @@ export const GetWordResponse = zod.object({
   "nextReviewAt": zod.coerce.date().nullish().describe('Marker - null means new word, non-null means in SRS queue'),
   "nextReviewSession": zod.number().nullish().describe('Global session number when this word is next due for review'),
   "reviewInterval": zod.number().optional().describe('Number of times reviewed correctly (index into intervals array)'),
-  "wordType": zod.union([zod.literal('academic'),zod.literal('everyday'),zod.literal('mixed'),zod.literal(null)]).nullish().describe('Usage context of the word'),
+  "wordType": zod.string().nullish().describe('Usage context of the word (any custom tag value)'),
   "wordGroup": zod.string().nullish().describe('Mnemonic group label — words sharing the same memory technique\/image'),
   "semanticGroup": zod.string().nullish().describe('Semantic group label — synonyms \/ words interchangeable in context'),
   "priority": zod.number().default(getWordResponsePriorityDefault).describe('Priority for Прописи ordering (0 = normal, 1 = high — words that were answered wrong)'),
   "consecutiveCorrect": zod.number().default(getWordResponseConsecutiveCorrectDefault).describe('Consecutive correct SRS answers — resets to 0 on wrong answer'),
+  "traceCount": zod.number().default(getWordResponseTraceCountDefault).describe('How many times this word has been completed in Прописи (trace) sessions'),
   "graduatedAt": zod.coerce.date().nullish().describe('When set — word is fully learned and removed from active review rotation'),
   "deletedAt": zod.coerce.date().nullish().describe('Soft-delete timestamp; null means active, non-null means in trash'),
   "createdAt": zod.coerce.date()
@@ -153,13 +159,14 @@ export const UpdateWordBody = zod.object({
   "english": zod.string().optional(),
   "mnemonic": zod.string().optional(),
   "frequencyRank": zod.number().optional(),
-  "wordType": zod.enum(['academic', 'everyday', 'mixed']).optional(),
+  "wordType": zod.string().optional().describe('Word type value (any custom tag value)'),
   "wordGroup": zod.string().optional().describe('Mnemonic group label'),
   "semanticGroup": zod.string().optional().describe('Semantic group label (synonyms \/ interchangeable words)')
 })
 
 export const updateWordResponsePriorityDefault = 0;
 export const updateWordResponseConsecutiveCorrectDefault = 0;
+export const updateWordResponseTraceCountDefault = 0;
 
 export const UpdateWordResponse = zod.object({
   "id": zod.number(),
@@ -174,11 +181,12 @@ export const UpdateWordResponse = zod.object({
   "nextReviewAt": zod.coerce.date().nullish().describe('Marker - null means new word, non-null means in SRS queue'),
   "nextReviewSession": zod.number().nullish().describe('Global session number when this word is next due for review'),
   "reviewInterval": zod.number().optional().describe('Number of times reviewed correctly (index into intervals array)'),
-  "wordType": zod.union([zod.literal('academic'),zod.literal('everyday'),zod.literal('mixed'),zod.literal(null)]).nullish().describe('Usage context of the word'),
+  "wordType": zod.string().nullish().describe('Usage context of the word (any custom tag value)'),
   "wordGroup": zod.string().nullish().describe('Mnemonic group label — words sharing the same memory technique\/image'),
   "semanticGroup": zod.string().nullish().describe('Semantic group label — synonyms \/ words interchangeable in context'),
   "priority": zod.number().default(updateWordResponsePriorityDefault).describe('Priority for Прописи ordering (0 = normal, 1 = high — words that were answered wrong)'),
   "consecutiveCorrect": zod.number().default(updateWordResponseConsecutiveCorrectDefault).describe('Consecutive correct SRS answers — resets to 0 on wrong answer'),
+  "traceCount": zod.number().default(updateWordResponseTraceCountDefault).describe('How many times this word has been completed in Прописи (trace) sessions'),
   "graduatedAt": zod.coerce.date().nullish().describe('When set — word is fully learned and removed from active review rotation'),
   "deletedAt": zod.coerce.date().nullish().describe('Soft-delete timestamp; null means active, non-null means in trash'),
   "createdAt": zod.coerce.date()
@@ -200,6 +208,7 @@ export const DeleteWordResponse = zod.void()
  */
 export const listTrashedWordsResponseWordsItemPriorityDefault = 0;
 export const listTrashedWordsResponseWordsItemConsecutiveCorrectDefault = 0;
+export const listTrashedWordsResponseWordsItemTraceCountDefault = 0;
 
 export const ListTrashedWordsResponse = zod.object({
   "words": zod.array(zod.object({
@@ -215,11 +224,12 @@ export const ListTrashedWordsResponse = zod.object({
   "nextReviewAt": zod.coerce.date().nullish().describe('Marker - null means new word, non-null means in SRS queue'),
   "nextReviewSession": zod.number().nullish().describe('Global session number when this word is next due for review'),
   "reviewInterval": zod.number().optional().describe('Number of times reviewed correctly (index into intervals array)'),
-  "wordType": zod.union([zod.literal('academic'),zod.literal('everyday'),zod.literal('mixed'),zod.literal(null)]).nullish().describe('Usage context of the word'),
+  "wordType": zod.string().nullish().describe('Usage context of the word (any custom tag value)'),
   "wordGroup": zod.string().nullish().describe('Mnemonic group label — words sharing the same memory technique\/image'),
   "semanticGroup": zod.string().nullish().describe('Semantic group label — synonyms \/ words interchangeable in context'),
   "priority": zod.number().default(listTrashedWordsResponseWordsItemPriorityDefault).describe('Priority for Прописи ordering (0 = normal, 1 = high — words that were answered wrong)'),
   "consecutiveCorrect": zod.number().default(listTrashedWordsResponseWordsItemConsecutiveCorrectDefault).describe('Consecutive correct SRS answers — resets to 0 on wrong answer'),
+  "traceCount": zod.number().default(listTrashedWordsResponseWordsItemTraceCountDefault).describe('How many times this word has been completed in Прописи (trace) sessions'),
   "graduatedAt": zod.coerce.date().nullish().describe('When set — word is fully learned and removed from active review rotation'),
   "deletedAt": zod.coerce.date().nullish().describe('Soft-delete timestamp; null means active, non-null means in trash'),
   "createdAt": zod.coerce.date()
@@ -233,6 +243,7 @@ export const ListTrashedWordsResponse = zod.object({
  */
 export const exportWordsResponseWordsItemPriorityDefault = 0;
 export const exportWordsResponseWordsItemConsecutiveCorrectDefault = 0;
+export const exportWordsResponseWordsItemTraceCountDefault = 0;
 
 export const ExportWordsResponse = zod.object({
   "exportedAt": zod.coerce.date(),
@@ -249,11 +260,12 @@ export const ExportWordsResponse = zod.object({
   "nextReviewAt": zod.coerce.date().nullish().describe('Marker - null means new word, non-null means in SRS queue'),
   "nextReviewSession": zod.number().nullish().describe('Global session number when this word is next due for review'),
   "reviewInterval": zod.number().optional().describe('Number of times reviewed correctly (index into intervals array)'),
-  "wordType": zod.union([zod.literal('academic'),zod.literal('everyday'),zod.literal('mixed'),zod.literal(null)]).nullish().describe('Usage context of the word'),
+  "wordType": zod.string().nullish().describe('Usage context of the word (any custom tag value)'),
   "wordGroup": zod.string().nullish().describe('Mnemonic group label — words sharing the same memory technique\/image'),
   "semanticGroup": zod.string().nullish().describe('Semantic group label — synonyms \/ words interchangeable in context'),
   "priority": zod.number().default(exportWordsResponseWordsItemPriorityDefault).describe('Priority for Прописи ordering (0 = normal, 1 = high — words that were answered wrong)'),
   "consecutiveCorrect": zod.number().default(exportWordsResponseWordsItemConsecutiveCorrectDefault).describe('Consecutive correct SRS answers — resets to 0 on wrong answer'),
+  "traceCount": zod.number().default(exportWordsResponseWordsItemTraceCountDefault).describe('How many times this word has been completed in Прописи (trace) sessions'),
   "graduatedAt": zod.coerce.date().nullish().describe('When set — word is fully learned and removed from active review rotation'),
   "deletedAt": zod.coerce.date().nullish().describe('Soft-delete timestamp; null means active, non-null means in trash'),
   "createdAt": zod.coerce.date()
@@ -270,6 +282,7 @@ export const MarkWordFamiliarParams = zod.object({
 
 export const markWordFamiliarResponsePriorityDefault = 0;
 export const markWordFamiliarResponseConsecutiveCorrectDefault = 0;
+export const markWordFamiliarResponseTraceCountDefault = 0;
 
 export const MarkWordFamiliarResponse = zod.object({
   "id": zod.number(),
@@ -284,11 +297,12 @@ export const MarkWordFamiliarResponse = zod.object({
   "nextReviewAt": zod.coerce.date().nullish().describe('Marker - null means new word, non-null means in SRS queue'),
   "nextReviewSession": zod.number().nullish().describe('Global session number when this word is next due for review'),
   "reviewInterval": zod.number().optional().describe('Number of times reviewed correctly (index into intervals array)'),
-  "wordType": zod.union([zod.literal('academic'),zod.literal('everyday'),zod.literal('mixed'),zod.literal(null)]).nullish().describe('Usage context of the word'),
+  "wordType": zod.string().nullish().describe('Usage context of the word (any custom tag value)'),
   "wordGroup": zod.string().nullish().describe('Mnemonic group label — words sharing the same memory technique\/image'),
   "semanticGroup": zod.string().nullish().describe('Semantic group label — synonyms \/ words interchangeable in context'),
   "priority": zod.number().default(markWordFamiliarResponsePriorityDefault).describe('Priority for Прописи ordering (0 = normal, 1 = high — words that were answered wrong)'),
   "consecutiveCorrect": zod.number().default(markWordFamiliarResponseConsecutiveCorrectDefault).describe('Consecutive correct SRS answers — resets to 0 on wrong answer'),
+  "traceCount": zod.number().default(markWordFamiliarResponseTraceCountDefault).describe('How many times this word has been completed in Прописи (trace) sessions'),
   "graduatedAt": zod.coerce.date().nullish().describe('When set — word is fully learned and removed from active review rotation'),
   "deletedAt": zod.coerce.date().nullish().describe('Soft-delete timestamp; null means active, non-null means in trash'),
   "createdAt": zod.coerce.date()
@@ -304,6 +318,7 @@ export const RestoreWordParams = zod.object({
 
 export const restoreWordResponsePriorityDefault = 0;
 export const restoreWordResponseConsecutiveCorrectDefault = 0;
+export const restoreWordResponseTraceCountDefault = 0;
 
 export const RestoreWordResponse = zod.object({
   "id": zod.number(),
@@ -318,11 +333,12 @@ export const RestoreWordResponse = zod.object({
   "nextReviewAt": zod.coerce.date().nullish().describe('Marker - null means new word, non-null means in SRS queue'),
   "nextReviewSession": zod.number().nullish().describe('Global session number when this word is next due for review'),
   "reviewInterval": zod.number().optional().describe('Number of times reviewed correctly (index into intervals array)'),
-  "wordType": zod.union([zod.literal('academic'),zod.literal('everyday'),zod.literal('mixed'),zod.literal(null)]).nullish().describe('Usage context of the word'),
+  "wordType": zod.string().nullish().describe('Usage context of the word (any custom tag value)'),
   "wordGroup": zod.string().nullish().describe('Mnemonic group label — words sharing the same memory technique\/image'),
   "semanticGroup": zod.string().nullish().describe('Semantic group label — synonyms \/ words interchangeable in context'),
   "priority": zod.number().default(restoreWordResponsePriorityDefault).describe('Priority for Прописи ordering (0 = normal, 1 = high — words that were answered wrong)'),
   "consecutiveCorrect": zod.number().default(restoreWordResponseConsecutiveCorrectDefault).describe('Consecutive correct SRS answers — resets to 0 on wrong answer'),
+  "traceCount": zod.number().default(restoreWordResponseTraceCountDefault).describe('How many times this word has been completed in Прописи (trace) sessions'),
   "graduatedAt": zod.coerce.date().nullish().describe('When set — word is fully learned and removed from active review rotation'),
   "deletedAt": zod.coerce.date().nullish().describe('Soft-delete timestamp; null means active, non-null means in trash'),
   "createdAt": zod.coerce.date()
@@ -361,7 +377,7 @@ export const BulkImportWordsBody = zod.object({
   "english": zod.string().optional(),
   "mnemonic": zod.string().optional(),
   "frequencyRank": zod.number().optional(),
-  "wordType": zod.enum(['academic', 'everyday', 'mixed']).optional(),
+  "wordType": zod.string().optional().describe('Word type value (any custom tag value)'),
   "wordGroup": zod.string().optional().describe('Mnemonic group label'),
   "semanticGroup": zod.string().optional().describe('Semantic group label (synonyms \/ interchangeable words)')
 }))
@@ -407,6 +423,7 @@ export const SubmitAnswerBody = zod.object({
 
 export const submitAnswerResponseWordPriorityDefault = 0;
 export const submitAnswerResponseWordConsecutiveCorrectDefault = 0;
+export const submitAnswerResponseWordTraceCountDefault = 0;
 
 export const SubmitAnswerResponse = zod.object({
   "wordId": zod.number(),
@@ -427,11 +444,12 @@ export const SubmitAnswerResponse = zod.object({
   "nextReviewAt": zod.coerce.date().nullish().describe('Marker - null means new word, non-null means in SRS queue'),
   "nextReviewSession": zod.number().nullish().describe('Global session number when this word is next due for review'),
   "reviewInterval": zod.number().optional().describe('Number of times reviewed correctly (index into intervals array)'),
-  "wordType": zod.union([zod.literal('academic'),zod.literal('everyday'),zod.literal('mixed'),zod.literal(null)]).nullish().describe('Usage context of the word'),
+  "wordType": zod.string().nullish().describe('Usage context of the word (any custom tag value)'),
   "wordGroup": zod.string().nullish().describe('Mnemonic group label — words sharing the same memory technique\/image'),
   "semanticGroup": zod.string().nullish().describe('Semantic group label — synonyms \/ words interchangeable in context'),
   "priority": zod.number().default(submitAnswerResponseWordPriorityDefault).describe('Priority for Прописи ordering (0 = normal, 1 = high — words that were answered wrong)'),
   "consecutiveCorrect": zod.number().default(submitAnswerResponseWordConsecutiveCorrectDefault).describe('Consecutive correct SRS answers — resets to 0 on wrong answer'),
+  "traceCount": zod.number().default(submitAnswerResponseWordTraceCountDefault).describe('How many times this word has been completed in Прописи (trace) sessions'),
   "graduatedAt": zod.coerce.date().nullish().describe('When set — word is fully learned and removed from active review rotation'),
   "deletedAt": zod.coerce.date().nullish().describe('Soft-delete timestamp; null means active, non-null means in trash'),
   "createdAt": zod.coerce.date()
@@ -574,5 +592,109 @@ export const GetStatsResponse = zod.object({
   "accuracyPercent": zod.number().describe('Percentage of correct answers without hints'),
   "wordsLearnedToday": zod.number()
 })
+
+
+/**
+ * @summary Increment trace count for a word
+ */
+export const RecordWordTraceParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const recordWordTraceResponsePriorityDefault = 0;
+export const recordWordTraceResponseConsecutiveCorrectDefault = 0;
+export const recordWordTraceResponseTraceCountDefault = 0;
+
+export const RecordWordTraceResponse = zod.object({
+  "id": zod.number(),
+  "russian": zod.string(),
+  "polish": zod.string().nullish(),
+  "german": zod.string().nullish(),
+  "english": zod.string().nullish(),
+  "mnemonic": zod.string().nullish(),
+  "frequencyRank": zod.number().nullish().describe('Frequency rank in academic dictionary (lower = more frequent)'),
+  "correctCount": zod.number().optional().describe('Total correct answers across all languages'),
+  "hintCount": zod.number().optional().describe('Total hints requested'),
+  "nextReviewAt": zod.coerce.date().nullish().describe('Marker - null means new word, non-null means in SRS queue'),
+  "nextReviewSession": zod.number().nullish().describe('Global session number when this word is next due for review'),
+  "reviewInterval": zod.number().optional().describe('Number of times reviewed correctly (index into intervals array)'),
+  "wordType": zod.string().nullish().describe('Usage context of the word (any custom tag value)'),
+  "wordGroup": zod.string().nullish().describe('Mnemonic group label — words sharing the same memory technique\/image'),
+  "semanticGroup": zod.string().nullish().describe('Semantic group label — synonyms \/ words interchangeable in context'),
+  "priority": zod.number().default(recordWordTraceResponsePriorityDefault).describe('Priority for Прописи ordering (0 = normal, 1 = high — words that were answered wrong)'),
+  "consecutiveCorrect": zod.number().default(recordWordTraceResponseConsecutiveCorrectDefault).describe('Consecutive correct SRS answers — resets to 0 on wrong answer'),
+  "traceCount": zod.number().default(recordWordTraceResponseTraceCountDefault).describe('How many times this word has been completed in Прописи (trace) sessions'),
+  "graduatedAt": zod.coerce.date().nullish().describe('When set — word is fully learned and removed from active review rotation'),
+  "deletedAt": zod.coerce.date().nullish().describe('Soft-delete timestamp; null means active, non-null means in trash'),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary List all custom tags optionally filtered by kind
+ */
+export const ListTagsQueryParams = zod.object({
+  "kind": zod.coerce.string().optional().describe('mnemonic_group | semantic_group | word_type')
+})
+
+export const ListTagsResponse = zod.object({
+  "tags": zod.array(zod.object({
+  "id": zod.number(),
+  "kind": zod.string(),
+  "value": zod.string(),
+  "label": zod.string(),
+  "sortOrder": zod.number()
+}))
+})
+
+
+/**
+ * @summary Create a new custom tag
+ */
+export const CreateTagBody = zod.object({
+  "kind": zod.string(),
+  "value": zod.string(),
+  "label": zod.string(),
+  "sortOrder": zod.number().optional()
+})
+
+export const CreateTagResponse = zod.object({
+  "id": zod.number(),
+  "kind": zod.string(),
+  "value": zod.string(),
+  "label": zod.string(),
+  "sortOrder": zod.number()
+})
+
+
+/**
+ * @summary Update a tag label or sort order
+ */
+export const UpdateTagParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateTagBody = zod.object({
+  "label": zod.string().optional(),
+  "sortOrder": zod.number().optional()
+})
+
+export const UpdateTagResponse = zod.object({
+  "id": zod.number(),
+  "kind": zod.string(),
+  "value": zod.string(),
+  "label": zod.string(),
+  "sortOrder": zod.number()
+})
+
+
+/**
+ * @summary Delete a custom tag
+ */
+export const DeleteTagParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteTagResponse = zod.void()
 
 

@@ -5,7 +5,6 @@
  * Vocabulary learning app API with spaced repetition
  * OpenAPI spec version: 0.1.0
  */
-import type { WordWordType } from './wordWordType';
 
 export interface Word {
   id: number;
@@ -40,10 +39,10 @@ export interface Word {
   /** Number of times reviewed correctly (index into intervals array) */
   reviewInterval?: number;
   /**
-     * Usage context of the word
+     * Usage context of the word (any custom tag value)
      * @nullable
      */
-  wordType?: WordWordType;
+  wordType?: string | null;
   /**
      * Mnemonic group label — words sharing the same memory technique/image
      * @nullable
@@ -58,6 +57,8 @@ export interface Word {
   priority?: number;
   /** Consecutive correct SRS answers — resets to 0 on wrong answer */
   consecutiveCorrect?: number;
+  /** How many times this word has been completed in Прописи (trace) sessions */
+  traceCount?: number;
   /**
      * When set — word is fully learned and removed from active review rotation
      * @nullable

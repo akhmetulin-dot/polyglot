@@ -30,6 +30,8 @@ export const wordsTable = pgTable("words", {
   consecutiveCorrect: integer("consecutive_correct").notNull().default(0),
   // When set: word is fully learned and removed from active review rotation
   graduatedAt: timestamp("graduated_at"),
+  // How many times this word has been completed in Прописи (trace) sessions
+  traceCount: integer("trace_count").notNull().default(0),
   // Soft delete: null = active, non-null = in trash
   deletedAt: timestamp("deleted_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),

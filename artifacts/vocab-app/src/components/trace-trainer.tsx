@@ -11,6 +11,7 @@ import { MNEMONIC_GROUP, SEMANTIC_GROUP } from "@/lib/field-meta";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useUpdateWord,
+  useRecordWordTrace,
   getListWordsQueryKey,
   getGetWordQueryKey,
 } from "@workspace/api-client-react";
@@ -152,8 +153,9 @@ export function TraceTrainer({
   const [localWordGroup, setLocalWordGroup]           = useState<string | null | undefined>(undefined);
   const [localSemanticGroup, setLocalSemanticGroup]   = useState<string | null | undefined>(undefined);
   const mnemonicRef  = useRef<HTMLTextAreaElement>(null);
-  const updateWord   = useUpdateWord();
-  const queryClient  = useQueryClient();
+  const updateWord      = useUpdateWord();
+  const recordTrace     = useRecordWordTrace();
+  const queryClient     = useQueryClient();
 
   // Apply pending focus after every render (iOS-safe: runs in commit phase)
   useEffect(() => {
@@ -239,6 +241,10 @@ export function TraceTrainer({
     if (rows.length === 0 || !rows.every(r => r.done)) return;
     const next = wordIndex + 1;
     setCompletedWords(c => c + 1);
+    // Increment trace count for the completed word (fire-and-forget)
+    if (current?.id) {
+      recordTrace.mutate({ id: current.id });
+    }
     if (next >= words.length) {
       setFinished(true);
       invalidateListOnFinish();

@@ -266,6 +266,22 @@ router.post("/words/:id/mark-familiar", async (req, res): Promise<void> => {
   res.json(updated);
 });
 
+// ─── Increment trace count ────────────────────────────────────────────────────
+router.post("/words/:id/trace", async (req, res): Promise<void> => {
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const id = parseInt(raw, 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+
+  const [word] = await db
+    .update(wordsTable)
+    .set({ traceCount: sql`${wordsTable.traceCount} + 1` })
+    .where(and(eq(wordsTable.id, id), isNull(wordsTable.deletedAt)))
+    .returning();
+
+  if (!word) { res.status(404).json({ error: "Word not found" }); return; }
+  res.json(word);
+});
+
 // ─── Restore from trash ───────────────────────────────────────────────────────
 router.post("/words/:id/restore", async (req, res): Promise<void> => {
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;

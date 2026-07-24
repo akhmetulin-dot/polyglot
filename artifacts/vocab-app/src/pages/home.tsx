@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { useGetStats, useGetSettings, useListWords } from "@workspace/api-client-react";
+import { useGetStats, useGetSettings, useListWords, useListTags } from "@workspace/api-client-react";
 import { MNEMONIC_GROUP, SEMANTIC_GROUP } from "@/lib/field-meta";
 
 const TYPE_LABELS: Record<string, string> = {
@@ -15,6 +15,7 @@ export default function Home() {
   const { data: stats, isLoading } = useGetStats();
   const { data: settings } = useGetSettings();
   const { data: wordsData } = useListWords({ limit: 1000 });
+  const { data: wordTypeTags } = useListTags({ kind: "word_type" });
 
   if (isLoading || !stats) return null;
 
@@ -25,16 +26,32 @@ export default function Home() {
 
   // ── Breakdown by wordType ────────────────────────────────────────────────────
   const words = wordsData?.words ?? [];
+
+  // Build label map from custom tags (fallback to TYPE_LABELS for legacy values)
+  const typeTagLabelMap = (wordTypeTags?.tags ?? []).reduce<Record<string, string>>((acc, t) => {
+    acc[t.value] = t.label;
+    return acc;
+  }, {});
+  const getTypeLabel = (key: string) => typeTagLabelMap[key] ?? TYPE_LABELS[key] ?? key;
+
   const typeCounts = words.reduce<Record<string, number>>((acc, w) => {
     const key = w.wordType || "__none__";
     acc[key] = (acc[key] ?? 0) + 1;
     return acc;
   }, {});
 
-  const typeOrder = ["academic", "everyday", "mixed", "__none__"];
+  const typeOrder = [
+    ...(wordTypeTags?.tags ?? []).map(t => t.value),
+    ...["academic", "everyday", "mixed"],
+    "__none__",
+  ].filter((v, i, a) => a.indexOf(v) === i); // unique
+
   const typeRows = typeOrder
     .filter(k => typeCounts[k])
-    .map(k => ({ key: k, label: TYPE_LABELS[k], count: typeCounts[k] }));
+    .map(k => ({ key: k, label: k === "__none__" ? "Без типа" : getTypeLabel(k), count: typeCounts[k] }));
+
+  // ── Прописи stats ────────────────────────────────────────────────────────────
+  const tracedCount = words.filter(w => (w.traceCount ?? 0) > 0).length;
 
   // ── "Не заполнено" по полям ─────────────────────────────────────────────────
   const total = stats.totalWords;
@@ -43,6 +60,7 @@ export default function Home() {
   const noType          = words.filter(w => !w.wordType).length;
   const noMnemoGroup    = words.filter(w => !w.wordGroup).length;
   const noSemanticGroup = words.filter(w => !w.semanticGroup).length;
+  const notTraced       = words.filter(w => (w.traceCount ?? 0) === 0).length;
 
   const gapRows = [
     { label: "без мнемоники",     count: noMnemonic },
@@ -50,6 +68,7 @@ export default function Home() {
     { label: "без типа",           count: noType },
     { label: "без мнемо-группы",   count: noMnemoGroup },
     { label: "без смысл-группы",   count: noSemanticGroup },
+    { label: "не прописано",       count: notTraced },
   ].filter(r => r.count > 0);
 
   // ── Breakdown by wordGroup (мнемонические) ──────────────────────────────────
@@ -134,6 +153,19 @@ export default function Home() {
             <Progress value={masteredPct} className="h-0.5" />
           )}
         </div>
+
+        {total > 0 && (
+          <div className="flex flex-col gap-2">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground text-sm">✍️ прописано</span>
+              <span className="font-bold">
+                {tracedCount}
+                <span className="text-muted-foreground font-normal"> / {total}</span>
+              </span>
+            </div>
+            <Progress value={(tracedCount / total) * 100} className="h-0.5" />
+          </div>
+        )}
 
       </div>
 

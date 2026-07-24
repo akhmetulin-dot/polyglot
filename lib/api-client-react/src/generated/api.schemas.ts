@@ -13,19 +13,6 @@ export interface ErrorResponse {
   error: string;
 }
 
-/**
- * Usage context of the word
- * @nullable
- */
-export type WordWordType = typeof WordWordType[keyof typeof WordWordType] | null;
-
-
-export const WordWordType = {
-  academic: 'academic',
-  everyday: 'everyday',
-  mixed: 'mixed',
-} as const;
-
 export interface Word {
   id: number;
   russian: string;
@@ -59,10 +46,10 @@ export interface Word {
   /** Number of times reviewed correctly (index into intervals array) */
   reviewInterval?: number;
   /**
-     * Usage context of the word
+     * Usage context of the word (any custom tag value)
      * @nullable
      */
-  wordType?: WordWordType;
+  wordType?: string | null;
   /**
      * Mnemonic group label — words sharing the same memory technique/image
      * @nullable
@@ -77,6 +64,8 @@ export interface Word {
   priority?: number;
   /** Consecutive correct SRS answers — resets to 0 on wrong answer */
   consecutiveCorrect?: number;
+  /** How many times this word has been completed in Прописи (trace) sessions */
+  traceCount?: number;
   /**
      * When set — word is fully learned and removed from active review rotation
      * @nullable
@@ -90,15 +79,6 @@ export interface Word {
   createdAt: string;
 }
 
-export type WordInputWordType = typeof WordInputWordType[keyof typeof WordInputWordType];
-
-
-export const WordInputWordType = {
-  academic: 'academic',
-  everyday: 'everyday',
-  mixed: 'mixed',
-} as const;
-
 export interface WordInput {
   /** @minLength 1 */
   russian: string;
@@ -107,21 +87,13 @@ export interface WordInput {
   english?: string;
   mnemonic?: string;
   frequencyRank?: number;
-  wordType?: WordInputWordType;
+  /** Word type value (any custom tag value) */
+  wordType?: string;
   /** Mnemonic group label */
   wordGroup?: string;
   /** Semantic group label (synonyms / interchangeable words) */
   semanticGroup?: string;
 }
-
-export type WordUpdateWordType = typeof WordUpdateWordType[keyof typeof WordUpdateWordType];
-
-
-export const WordUpdateWordType = {
-  academic: 'academic',
-  everyday: 'everyday',
-  mixed: 'mixed',
-} as const;
 
 export interface WordUpdate {
   /** @minLength 1 */
@@ -131,7 +103,8 @@ export interface WordUpdate {
   english?: string;
   mnemonic?: string;
   frequencyRank?: number;
-  wordType?: WordUpdateWordType;
+  /** Word type value (any custom tag value) */
+  wordType?: string;
   /** Mnemonic group label */
   wordGroup?: string;
   /** Semantic group label (synonyms / interchangeable words) */
@@ -294,6 +267,30 @@ export interface SettingsInput {
   appName?: string;
 }
 
+export interface Tag {
+  id: number;
+  kind: string;
+  value: string;
+  label: string;
+  sortOrder: number;
+}
+
+export interface TagListResponse {
+  tags: Tag[];
+}
+
+export interface TagInput {
+  kind: string;
+  value: string;
+  label: string;
+  sortOrder?: number;
+}
+
+export interface TagUpdate {
+  label?: string;
+  sortOrder?: number;
+}
+
 export interface WordHistoryEvent {
   id: number;
   /** correct | wrong | hint | review_correct | review_wrong */
@@ -364,5 +361,12 @@ export type GetDueReviewsParams = {
  * Max number of words to return
  */
 count?: number;
+};
+
+export type ListTagsParams = {
+/**
+ * mnemonic_group | semantic_group | word_type
+ */
+kind?: string;
 };
 
