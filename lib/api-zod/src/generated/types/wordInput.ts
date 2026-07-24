@@ -16,5 +16,8 @@ export interface WordInput {
   mnemonic?: string;
   frequencyRank?: number;
   wordType?: WordInputWordType;
+  /** Mnemonic group label */
   wordGroup?: string;
+  /** Semantic group label (synonyms / interchangeable words) */
+  semanticGroup?: string;
 }

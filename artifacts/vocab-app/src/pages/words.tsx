@@ -181,6 +181,20 @@ const WordRow = memo(function WordRow({
       {word.mnemonic && (
         <p className="text-xs text-primary/60 italic mt-1 leading-relaxed break-words">{word.mnemonic}</p>
       )}
+      {(word.wordGroup || word.semanticGroup) && (
+        <div className="flex gap-1.5 mt-1.5 flex-wrap">
+          {word.wordGroup && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 leading-none">
+              🧠 {word.wordGroup}
+            </span>
+          )}
+          {word.semanticGroup && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400 leading-none">
+              ≈ {word.semanticGroup}
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 });
@@ -205,7 +219,8 @@ function WordDialog({
 
   const emptyForm = () => ({
     russian: "", polish: "", german: "", english: "",
-    mnemonic: "", frequencyRank: "", wordType: "" as string, wordGroup: "" as string,
+    mnemonic: "", frequencyRank: "", wordType: "" as string,
+    wordGroup: "" as string, semanticGroup: "" as string,
   });
 
   const [formData, setFormData] = useState(emptyForm());
@@ -224,6 +239,7 @@ function WordDialog({
       frequencyRank: editingWord.frequencyRank?.toString() || "",
       wordType:      editingWord.wordType      || "",
       wordGroup:     editingWord.wordGroup     || "",
+      semanticGroup: editingWord.semanticGroup || "",
     } : emptyForm());
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -274,7 +290,8 @@ function WordDialog({
       mnemonic:      formData.mnemonic.trim() || undefined,
       frequencyRank: formData.frequencyRank ? parseInt(formData.frequencyRank, 10) : undefined,
       wordType:      (formData.wordType || undefined) as "academic" | "everyday" | "mixed" | undefined,
-      wordGroup:     formData.wordGroup.trim() || undefined,
+      wordGroup:     formData.wordGroup.trim()     || undefined,
+      semanticGroup: formData.semanticGroup.trim() || undefined,
     };
     if (editingWord) {
       updateWord.mutate({ id: editingWord.id, data: payload }, {
@@ -396,11 +413,19 @@ function WordDialog({
           </div>
 
           <div className="space-y-1.5">
-            <Label>Смысловая группа</Label>
+            <Label>Мнемоническая группа</Label>
             <Input value={formData.wordGroup} onChange={e => set({ wordGroup: e.target.value })}
-              placeholder="Например: движение, эмоции, еда…"
+              placeholder="Например: дерево-23, звук-ш…"
               autoComplete="off" autoCorrect="off" spellCheck={false} />
-            <p className="text-[11px] text-muted-foreground">Метка для группировки. Видна в списке рядом со словом.</p>
+            <p className="text-[11px] text-muted-foreground">Слова с одной техникой запоминания — помогает работать блоками по методике.</p>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Смысловая группа</Label>
+            <Input value={formData.semanticGroup} onChange={e => set({ semanticGroup: e.target.value })}
+              placeholder="Например: начать, убивать, говорить…"
+              autoComplete="off" autoCorrect="off" spellCheck={false} />
+            <p className="text-[11px] text-muted-foreground">Синонимы или взаимозаменяемые слова — объединяй слова с одним смыслом, чтобы отрабатывать их вместе.</p>
           </div>
 
           {editingWord && wordHistory && wordHistory.events.length > 0 && (
@@ -465,7 +490,8 @@ export default function Words() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [sortBy, setSortBy] = useState<ListWordsSortBy>(ListWordsSortBy.frequency);
   const [filterType, setFilterType] = useState<string>("all");
-  const [filterGroup, setFilterGroup] = useState<string>("all");
+  const [filterGroup, setFilterGroup] = useState<string>("all");         // мнемоническая группа
+  const [filterSemanticGroup, setFilterSemanticGroup] = useState<string>("all"); // смысловая группа
   const [sortDifficult, setSortDifficult] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingWord, setEditingWord] = useState<Word | null>(null);
@@ -486,11 +512,16 @@ export default function Words() {
     sortBy 
   });
 
-  // Unique word groups from current data — shown in the group filter dropdown
+  // Unique mnemonic groups from current data
   const availableGroups = useMemo(() =>
-    Array.from(
-      new Set((wordsData?.words ?? []).map(w => w.wordGroup).filter(Boolean) as string[])
-    ).sort((a, b) => a.localeCompare(b, "ru")),
+    Array.from(new Set((wordsData?.words ?? []).map(w => w.wordGroup).filter(Boolean) as string[]))
+      .sort((a, b) => a.localeCompare(b, "ru")),
+  [wordsData?.words]);
+
+  // Unique semantic groups from current data
+  const availableSemanticGroups = useMemo(() =>
+    Array.from(new Set((wordsData?.words ?? []).map(w => w.semanticGroup).filter(Boolean) as string[]))
+      .sort((a, b) => a.localeCompare(b, "ru")),
   [wordsData?.words]);
 
   // Filtered + sorted word list — only recomputed when data or filters change
@@ -498,13 +529,14 @@ export default function Words() {
     (wordsData?.words ?? [])
       .filter(w =>
         (filterType === "all" ? true : filterType === "none" ? !w.wordType : w.wordType === filterType) &&
-        (filterGroup === "all" ? true : w.wordGroup === filterGroup)
+        (filterGroup === "all" ? true : w.wordGroup === filterGroup) &&
+        (filterSemanticGroup === "all" ? true : w.semanticGroup === filterSemanticGroup)
       )
       .sort(sortDifficult
         ? (a, b) => ((b.hintCount ?? 0) - (b.correctCount ?? 0)) - ((a.hintCount ?? 0) - (a.correctCount ?? 0))
         : () => 0
       ),
-  [wordsData?.words, filterType, filterGroup, sortDifficult]);
+  [wordsData?.words, filterType, filterGroup, filterSemanticGroup, sortDifficult]);
 
   const bulkImportWords = useBulkImportWords();
 
@@ -702,10 +734,11 @@ export default function Words() {
           <div className="flex items-baseline gap-3">
           <h1 className="text-2xl sm:text-3xl font-bold font-serif text-foreground">Словарь</h1>
           {wordsData && (() => {
-            const showFilter = filterType !== "all" || filterGroup !== "all" || !!debouncedSearch;
+            const anyFilter = filterType !== "all" || filterGroup !== "all" || filterSemanticGroup !== "all" || !!debouncedSearch;
+            const anyGroupFilter = filterType !== "all" || filterGroup !== "all" || filterSemanticGroup !== "all";
             return (
               <span className="text-sm text-muted-foreground font-mono">
-                {showFilter && (filterType !== "all" || filterGroup !== "all") ? `${filteredWords.length} / ` : ""}{wordsData.total} сл.
+                {anyFilter && anyGroupFilter ? `${filteredWords.length} / ` : ""}{wordsData.total} сл.
               </span>
             );
           })()}
@@ -777,13 +810,26 @@ export default function Words() {
         </Select>
         {availableGroups.length > 0 && (
           <Select value={filterGroup} onValueChange={setFilterGroup}>
-            <SelectTrigger className="sm:w-[160px]">
-              <SelectValue placeholder="Группа" />
+            <SelectTrigger className="sm:w-[170px]">
+              <SelectValue placeholder="Мнемо-группа" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Все группы</SelectItem>
+              <SelectItem value="all">🧠 Все мнемо-группы</SelectItem>
               {availableGroups.map(g => (
-                <SelectItem key={g} value={g}>{g}</SelectItem>
+                <SelectItem key={g} value={g}>🧠 {g}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+        {availableSemanticGroups.length > 0 && (
+          <Select value={filterSemanticGroup} onValueChange={setFilterSemanticGroup}>
+            <SelectTrigger className="sm:w-[170px]">
+              <SelectValue placeholder="Смысл-группа" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">≈ Все смысл-группы</SelectItem>
+              {availableSemanticGroups.map(g => (
+                <SelectItem key={g} value={g}>≈ {g}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -811,7 +857,7 @@ export default function Words() {
         <div className="flex py-20 items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
-      ) : (filteredWords.length === 0 && (filterType !== "all" || filterGroup !== "all")) ? (
+      ) : (filteredWords.length === 0 && (filterType !== "all" || filterGroup !== "all" || filterSemanticGroup !== "all")) ? (
         <div className="text-center py-12 text-muted-foreground">Нет слов с этим фильтром</div>
       ) : wordsData?.words.length === 0 ? (
         <Card className="border-dashed border-2 bg-transparent text-center py-12">

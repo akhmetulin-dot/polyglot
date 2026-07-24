@@ -20,8 +20,10 @@ export const wordsTable = pgTable("words", {
   reviewInterval: integer("review_interval").notNull().default(0),
   // Word usage context: academic | everyday | mixed | null (unknown)
   wordType: text("word_type"),
-  // Semantic group label — for tagging synonyms/thematic clusters (e.g. "движение", "эмоции")
+  // Mnemonic group label — words sharing the same memory technique/image
   wordGroup: text("word_group"),
+  // Semantic group label — synonyms / words interchangeable in context (e.g. "начать/начинать")
+  semanticGroup: text("semantic_group"),
   // Priority for Прописи ordering: 0 = normal, 1 = high (wrong-answer words come first)
   priority: integer("priority").notNull().default(0),
   // Consecutive correct answers in SRS — used for graduation

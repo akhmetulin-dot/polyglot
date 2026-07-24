@@ -476,7 +476,10 @@ components:
           description: Usage context of the word
         wordGroup:
           type: ["string", "null"]
-          description: Semantic group label for synonym/thematic clusters (e.g. "движение")
+          description: Mnemonic group label — words sharing the same memory technique/image
+        semanticGroup:
+          type: ["string", "null"]
+          description: Semantic group label — synonyms / words interchangeable in context
         priority:
           type: integer
           description: Priority for Прописи ordering (0 = normal, 1 = high — words that were answered wrong)
@@ -519,6 +522,10 @@ components:
           enum: [academic, everyday, mixed]
         wordGroup:
           type: string
+          description: Mnemonic group label
+        semanticGroup:
+          type: string
+          description: Semantic group label (synonyms / interchangeable words)
 
     WordUpdate:
       type: object
@@ -541,6 +548,10 @@ components:
           enum: [academic, everyday, mixed]
         wordGroup:
           type: string
+          description: Mnemonic group label
+        semanticGroup:
+          type: string
+          description: Semantic group label (synonyms / interchangeable words)
 
     WordListResponse:
       type: object

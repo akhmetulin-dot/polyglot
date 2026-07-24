@@ -64,10 +64,15 @@ export interface Word {
      */
   wordType?: WordWordType;
   /**
-     * Semantic group label for synonym/thematic clusters (e.g. "движение")
+     * Mnemonic group label — words sharing the same memory technique/image
      * @nullable
      */
   wordGroup?: string | null;
+  /**
+     * Semantic group label — synonyms / words interchangeable in context
+     * @nullable
+     */
+  semanticGroup?: string | null;
   /** Priority for Прописи ordering (0 = normal, 1 = high — words that were answered wrong) */
   priority?: number;
   /** Consecutive correct SRS answers — resets to 0 on wrong answer */
@@ -103,7 +108,10 @@ export interface WordInput {
   mnemonic?: string;
   frequencyRank?: number;
   wordType?: WordInputWordType;
+  /** Mnemonic group label */
   wordGroup?: string;
+  /** Semantic group label (synonyms / interchangeable words) */
+  semanticGroup?: string;
 }
 
 export type WordUpdateWordType = typeof WordUpdateWordType[keyof typeof WordUpdateWordType];
@@ -124,7 +132,10 @@ export interface WordUpdate {
   mnemonic?: string;
   frequencyRank?: number;
   wordType?: WordUpdateWordType;
+  /** Mnemonic group label */
   wordGroup?: string;
+  /** Semantic group label (synonyms / interchangeable words) */
+  semanticGroup?: string;
 }
 
 export interface WordListResponse {

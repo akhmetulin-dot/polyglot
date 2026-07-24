@@ -16,5 +16,8 @@ export interface WordUpdate {
   mnemonic?: string;
   frequencyRank?: number;
   wordType?: WordUpdateWordType;
+  /** Mnemonic group label */
   wordGroup?: string;
+  /** Semantic group label (synonyms / interchangeable words) */
+  semanticGroup?: string;
 }

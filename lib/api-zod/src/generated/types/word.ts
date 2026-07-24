@@ -45,10 +45,15 @@ export interface Word {
      */
   wordType?: WordWordType;
   /**
-     * Semantic group label for synonym/thematic clusters (e.g. "движение")
+     * Mnemonic group label — words sharing the same memory technique/image
      * @nullable
      */
   wordGroup?: string | null;
+  /**
+     * Semantic group label — synonyms / words interchangeable in context
+     * @nullable
+     */
+  semanticGroup?: string | null;
   /** Priority for Прописи ordering (0 = normal, 1 = high — words that were answered wrong) */
   priority?: number;
   /** Consecutive correct SRS answers — resets to 0 on wrong answer */
