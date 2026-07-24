@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Check, ArrowRight, PenLine, Pencil, Save } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { MNEMONIC_GROUP, SEMANTIC_GROUP } from "@/lib/field-meta";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useUpdateWord,
@@ -415,22 +416,22 @@ export function TraceTrainer({
             {/* Groups row */}
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1">
-                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">🧠 Мнемо-группа</Label>
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">{MNEMONIC_GROUP.emoji} {MNEMONIC_GROUP.label}</Label>
                 <Input
                   value={wordGroupDraft}
                   onChange={e => setWordGroupDraft(e.target.value)}
-                  placeholder="дерево-23…"
+                  placeholder={MNEMONIC_GROUP.placeholder}
                   className="h-7 text-xs"
                   autoComplete="off"
                   spellCheck={false}
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">≈ Смысл-группа</Label>
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">{SEMANTIC_GROUP.emoji} {SEMANTIC_GROUP.label}</Label>
                 <Input
                   value={semanticGroupDraft}
                   onChange={e => setSemanticGroupDraft(e.target.value)}
-                  placeholder="начать…"
+                  placeholder={SEMANTIC_GROUP.placeholder}
                   className="h-7 text-xs"
                   autoComplete="off"
                   spellCheck={false}
@@ -463,12 +464,12 @@ export function TraceTrainer({
                 <div className="flex gap-1.5 flex-wrap">
                   {displayWordGroup && (
                     <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 leading-none">
-                      🧠 {displayWordGroup}
+                      {MNEMONIC_GROUP.emoji} {displayWordGroup}
                     </span>
                   )}
                   {displaySemanticGroup && (
                     <span className="text-[10px] px-1.5 py-0.5 rounded bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400 leading-none">
-                      ≈ {displaySemanticGroup}
+                      {SEMANTIC_GROUP.emoji} {displaySemanticGroup}
                     </span>
                   )}
                 </div>

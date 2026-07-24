@@ -2,6 +2,7 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useGetStats, useGetSettings, useListWords } from "@workspace/api-client-react";
+import { MNEMONIC_GROUP, SEMANTIC_GROUP } from "@/lib/field-meta";
 
 const TYPE_LABELS: Record<string, string> = {
   academic:  "Академические",
@@ -175,7 +176,7 @@ export default function Home() {
       {/* ── По мнемоническим группам ── */}
       {mnemoGroupRows.length > 0 && (
         <div className="flex flex-col gap-3">
-          <p className="text-xs uppercase tracking-widest text-muted-foreground font-semibold">🧠 Мнемо-группы</p>
+          <p className="text-xs uppercase tracking-widest text-muted-foreground font-semibold">{MNEMONIC_GROUP.emoji} {MNEMONIC_GROUP.label}ы</p>
           <div className="flex flex-col gap-3">
             {mnemoGroupRows.map(([group, count]) => (
               <div key={group}>
@@ -193,7 +194,7 @@ export default function Home() {
       {/* ── По смысловым группам ── */}
       {semanticGroupRows.length > 0 && (
         <div className="flex flex-col gap-3">
-          <p className="text-xs uppercase tracking-widest text-muted-foreground font-semibold">≈ Смысл-группы</p>
+          <p className="text-xs uppercase tracking-widest text-muted-foreground font-semibold">{SEMANTIC_GROUP.emoji} {SEMANTIC_GROUP.label}ы</p>
           <div className="flex flex-col gap-3">
             {semanticGroupRows.map(([group, count]) => (
               <div key={group}>

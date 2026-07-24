@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useMemo, useCallback, memo } from "react";
+import { MNEMONIC_GROUP, SEMANTIC_GROUP } from "@/lib/field-meta";
 
 // Returns the height of the visual viewport (shrinks when iOS keyboard opens)
 function useVisualViewportHeight() {
@@ -185,12 +186,12 @@ const WordRow = memo(function WordRow({
         <div className="flex gap-1.5 mt-1.5 flex-wrap">
           {word.wordGroup && (
             <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 leading-none">
-              🧠 {word.wordGroup}
+              {MNEMONIC_GROUP.emoji} {word.wordGroup}
             </span>
           )}
           {word.semanticGroup && (
             <span className="text-[10px] px-1.5 py-0.5 rounded bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400 leading-none">
-              ≈ {word.semanticGroup}
+              {SEMANTIC_GROUP.emoji} {word.semanticGroup}
             </span>
           )}
         </div>
@@ -413,19 +414,19 @@ function WordDialog({
           </div>
 
           <div className="space-y-1.5">
-            <Label>Мнемоническая группа</Label>
+            <Label>{MNEMONIC_GROUP.labelFull}</Label>
             <Input value={formData.wordGroup} onChange={e => set({ wordGroup: e.target.value })}
-              placeholder="Например: дерево-23, звук-ш…"
+              placeholder={MNEMONIC_GROUP.placeholder}
               autoComplete="off" autoCorrect="off" spellCheck={false} />
-            <p className="text-[11px] text-muted-foreground">Слова с одной техникой запоминания — помогает работать блоками по методике.</p>
+            <p className="text-[11px] text-muted-foreground">{MNEMONIC_GROUP.hint}</p>
           </div>
 
           <div className="space-y-1.5">
-            <Label>Смысловая группа</Label>
+            <Label>{SEMANTIC_GROUP.labelFull}</Label>
             <Input value={formData.semanticGroup} onChange={e => set({ semanticGroup: e.target.value })}
-              placeholder="Например: начать, убивать, говорить…"
+              placeholder={SEMANTIC_GROUP.placeholder}
               autoComplete="off" autoCorrect="off" spellCheck={false} />
-            <p className="text-[11px] text-muted-foreground">Синонимы или взаимозаменяемые слова — объединяй слова с одним смыслом, чтобы отрабатывать их вместе.</p>
+            <p className="text-[11px] text-muted-foreground">{SEMANTIC_GROUP.hint}</p>
           </div>
 
           {editingWord && wordHistory && wordHistory.events.length > 0 && (
@@ -811,12 +812,12 @@ export default function Words() {
         {availableGroups.length > 0 && (
           <Select value={filterGroup} onValueChange={setFilterGroup}>
             <SelectTrigger className="sm:w-[170px]">
-              <SelectValue placeholder="Мнемо-группа" />
+              <SelectValue placeholder={MNEMONIC_GROUP.label} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">🧠 Все мнемо-группы</SelectItem>
+              <SelectItem value="all">{MNEMONIC_GROUP.emoji} Все {MNEMONIC_GROUP.label.toLowerCase()}ы</SelectItem>
               {availableGroups.map(g => (
-                <SelectItem key={g} value={g}>🧠 {g}</SelectItem>
+                <SelectItem key={g} value={g}>{MNEMONIC_GROUP.emoji} {g}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -824,12 +825,12 @@ export default function Words() {
         {availableSemanticGroups.length > 0 && (
           <Select value={filterSemanticGroup} onValueChange={setFilterSemanticGroup}>
             <SelectTrigger className="sm:w-[170px]">
-              <SelectValue placeholder="Смысл-группа" />
+              <SelectValue placeholder={SEMANTIC_GROUP.label} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">≈ Все смысл-группы</SelectItem>
+              <SelectItem value="all">{SEMANTIC_GROUP.emoji} Все {SEMANTIC_GROUP.label.toLowerCase()}ы</SelectItem>
               {availableSemanticGroups.map(g => (
-                <SelectItem key={g} value={g}>≈ {g}</SelectItem>
+                <SelectItem key={g} value={g}>{SEMANTIC_GROUP.emoji} {g}</SelectItem>
               ))}
             </SelectContent>
           </Select>
