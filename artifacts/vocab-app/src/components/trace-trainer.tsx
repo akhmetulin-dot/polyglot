@@ -29,7 +29,7 @@ interface TraceTrainerProps {
   headerRight?: ReactNode;
 }
 
-interface PassFields {
+interface FieldValues {
   pl: string;
   de: string;
   en: string;
@@ -135,7 +135,14 @@ export function TraceTrainer({
 }: TraceTrainerProps) {
   const [wordIndex, setWordIndex]           = useState(0);
   const [passIndex, setPassIndex]           = useState(0);
-  const [fields, setFields]                 = useState<PassFields>({ pl: "", de: "", en: "" });
+  // stepIndex = which position in the current pass sequence (0, 1, 2…) is active
+  const [stepIndex, setStepIndex]           = useState(0);
+  // What the user is currently typing for the active field
+  const [activeInput, setActiveInput]       = useState("");
+  // Values already confirmed in the current pass (locked green)
+  const [confirmed, setConfirmed]           = useState<FieldValues>({ pl: "", de: "", en: "" });
+  // Values from the PREVIOUS pass shown in fields not yet reached (locked green, will clear on focus)
+  const [holdValues, setHoldValues]         = useState<FieldValues>({ pl: "", de: "", en: "" });
   const [flash, setFlash]                   = useState(false);
   const [completedWords, setCompletedWords] = useState(0);
   const [finished, setFinished]             = useState(false);
@@ -185,7 +192,10 @@ export function TraceTrainer({
   // Reset pass state when word changes
   useEffect(() => {
     setPassIndex(0);
-    setFields({ pl: "", de: "", en: "" });
+    setStepIndex(0);
+    setActiveInput("");
+    setConfirmed({ pl: "", de: "", en: "" });
+    setHoldValues({ pl: "", de: "", en: "" });
     setFlash(false);
     focusFirstOnRender.current = true;
   }, [wordIndex, repetitions]);
@@ -279,27 +289,28 @@ export function TraceTrainer({
     }
   };
 
-  const handleChange = (field: Field, value: string) => {
-    if (!current || flash) return;
+  // Pass sequence: even pass = PL→DE→EN, odd pass = EN→DE→PL
+  // Visual column order is ALWAYS PL | DE | EN — only focus direction changes
+  const passSequence = current ? getRowFields(passIndex, current) : ([] as Field[]);
+  const activeField  = passSequence[stepIndex] as Field | undefined;
 
-    const newFields = { ...fields, [field]: value };
+  const fieldTarget = (f: Field) =>
+    f === "pl" ? current?.polish : f === "de" ? current?.german : current?.english;
 
-    const plOk = !current.polish  || norm(newFields.pl) === norm(current.polish  ?? "");
-    const deOk = !current.german  || norm(newFields.de) === norm(current.german  ?? "");
-    const enOk = !current.english || norm(newFields.en) === norm(current.english ?? "");
+  const handleChange = (value: string) => {
+    if (!current || !activeField || flash) return;
+    setActiveInput(value);
 
-    const fieldTarget =
-      field === "pl" ? current.polish :
-      field === "de" ? current.german : current.english;
-    const isCurrentCorrect = !!fieldTarget && norm(value) === norm(fieldTarget);
-    const passDone = plOk && deOk && enOk;
+    const target = fieldTarget(activeField);
+    if (!target || norm(value) !== norm(target)) return;
 
-    // Field order for current pass direction (even = forward, odd = backward)
-    const fieldOrder = getRowFields(passIndex, current);
+    // Active field correct — confirm it
+    const newConfirmed = { ...confirmed, [activeField]: target };
+    const nextStep = stepIndex + 1;
 
-    if (passDone) {
-      // Flash green, then either start next pass (same row clears + reverses) or advance word
-      setFields(newFields);
+    if (nextStep >= passSequence.length) {
+      // All fields done → flash → advance pass or word
+      setConfirmed(newConfirmed);
       setFlash(true);
       setTimeout(() => {
         setFlash(false);
@@ -307,31 +318,21 @@ export function TraceTrainer({
         if (nextPass >= repetitions) {
           advanceWord();
         } else {
+          // Next pass: hold = confirmed values of this pass, active = first field of next pass
+          setHoldValues(newConfirmed);
+          setConfirmed({ pl: "", de: "", en: "" });
           setPassIndex(nextPass);
-          setFields({ pl: "", de: "", en: "" });
+          setStepIndex(0);
+          setActiveInput("");
           focusFirstOnRender.current = true;
         }
       }, 400);
-      return;
-    }
-
-    setFields(newFields);
-
-    if (isCurrentCorrect) {
-      // Auto-advance to next field in current pass direction
-      const fieldIdx = fieldOrder.indexOf(field);
-      if (fieldIdx < fieldOrder.length - 1) {
-        const nextField  = fieldOrder[fieldIdx + 1];
-        const nextTarget = nextField === "pl" ? current.polish : nextField === "de" ? current.german : current.english;
-        const nextAlreadyOk = !!nextTarget && norm(newFields[nextField]) === norm(nextTarget ?? "");
-        if (!nextAlreadyOk) pendingFocusId.current = `trace-input-${nextField}`;
-      } else {
-        // Last field in direction done but pass not complete → wrap to first unfilled
-        const firstField  = fieldOrder[0];
-        const firstTarget = firstField === "pl" ? current.polish : firstField === "de" ? current.german : current.english;
-        const firstAlreadyOk = !!firstTarget && norm(newFields[firstField]) === norm(firstTarget ?? "");
-        if (!firstAlreadyOk) pendingFocusId.current = `trace-input-${firstField}`;
-      }
+    } else {
+      // Advance to next field in sequence — it will clear (drop from holdValues to active)
+      setConfirmed(newConfirmed);
+      setStepIndex(nextStep);
+      setActiveInput("");
+      pendingFocusId.current = `trace-input-${passSequence[nextStep]}`;
     }
   };
 
@@ -373,7 +374,10 @@ export function TraceTrainer({
             setCompletedWords(0);
             setWordIndex(0);
             setPassIndex(0);
-            setFields({ pl: "", de: "", en: "" });
+            setStepIndex(0);
+            setActiveInput("");
+            setConfirmed({ pl: "", de: "", en: "" });
+            setHoldValues({ pl: "", de: "", en: "" });
             setFlash(false);
           }}>
             Ещё раз
@@ -503,9 +507,14 @@ export function TraceTrainer({
     </div>
   );
 
-  // Current pass direction: even = forward PL→DE→EN, odd = backward EN→DE→PL
-  const passFields = getRowFields(passIndex, current);
-  const fieldActive: Record<Field, boolean> = { pl: hasPl, de: haDe, en: hasEn };
+  // Visual column order is ALWAYS PL → DE → EN (never reorders).
+  // Only the focus sequence changes per pass direction.
+  const visualFields: Field[] = (["pl", "de", "en"] as Field[]).filter(f =>
+    f === "pl" ? hasPl : f === "de" ? haDe : hasEn
+  );
+
+  // Which position in passSequence corresponds to each field
+  const passStepOf = (f: Field) => passSequence.indexOf(f);
 
   // Pass-progress dots (shown only when repetitions > 1)
   const passDots = repetitions > 1 && (
@@ -515,7 +524,7 @@ export function TraceTrainer({
           key={i}
           className={cn(
             "h-1.5 rounded-full transition-all duration-300",
-            i < passIndex  ? "w-5 bg-green-400/70" :
+            i < passIndex   ? "w-5 bg-green-400/70" :
             i === passIndex ? "w-5 bg-primary" : "w-2 bg-muted-foreground/25",
           )}
         />
@@ -526,22 +535,38 @@ export function TraceTrainer({
   const inputRows = (
     <div className="space-y-2">
       <div className={cn(
-        "flex gap-3 w-full overflow-x-auto scrollbar-none transition-opacity duration-300",
+        "flex gap-3 w-full overflow-x-auto scrollbar-none",
         flash && "success-pulse",
       )}>
-        {passFields.filter(f => fieldActive[f]).map((f, idx) => (
-          <FieldInput
-            key={f}
-            ref={idx === 0 ? firstInputRef : undefined}
-            id={`trace-input-${f}`}
-            hint={f === "pl" ? (current.polish ?? "") : f === "de" ? (current.german ?? "") : (current.english ?? "")}
-            value={fields[f]}
-            onChange={v => handleChange(f, v)}
-            onFocus={handleInputFocus}
-            done={flash}
-            lang={f}
-          />
-        ))}
+        {visualFields.map(f => {
+          const step   = passStepOf(f);
+          const isActive    = f === activeField && !flash;
+          const isDoneInPass = step < stepIndex || flash; // confirmed in this pass
+          const isHoldover  = !isActive && !isDoneInPass; // prev-pass value, not yet reached
+
+          // What to display in the input
+          const displayValue =
+            isActive    ? activeInput :
+            isDoneInPass ? confirmed[f] :
+            holdValues[f]; // may be "" for first pass (shows hint)
+
+          // Green style if confirmed in current pass OR holding a prev-pass answer
+          const isDoneStyle = isDoneInPass || (isHoldover && holdValues[f] !== "");
+
+          return (
+            <FieldInput
+              key={f}
+              ref={isActive ? firstInputRef : undefined}
+              id={`trace-input-${f}`}
+              hint={f === "pl" ? (current.polish ?? "") : f === "de" ? (current.german ?? "") : (current.english ?? "")}
+              value={displayValue}
+              onChange={isActive ? v => handleChange(v) : () => {}}
+              onFocus={handleInputFocus}
+              done={isDoneStyle}
+              lang={f}
+            />
+          );
+        })}
       </div>
       {passDots}
     </div>
