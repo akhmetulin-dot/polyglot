@@ -2,11 +2,26 @@
  * TagsManagerDialog — full CRUD for a custom tag list (mnemonic_group, semantic_group, word_type).
  * Allows rename and delete. New tags are created inline via GroupCombobox "Add new".
  */
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Pencil, Trash2, Check, X, Loader2, Plus } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
+
+// Tracks visual viewport height so dialog shrinks when iOS keyboard appears
+function useVisualViewportHeight() {
+  const get = () => window.visualViewport?.height ?? window.innerHeight;
+  const [h, setH] = useState(get);
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const update = () => setH(vv.height);
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    return () => { vv.removeEventListener("resize", update); vv.removeEventListener("scroll", update); };
+  }, []);
+  return h;
+}
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -31,6 +46,7 @@ interface TagsManagerDialogProps {
 export function TagsManagerDialog({
   open, onOpenChange, kind, title, emoji, description, separateValueLabel = false,
 }: TagsManagerDialogProps) {
+  const vvh = useVisualViewportHeight();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -103,7 +119,10 @@ export function TagsManagerDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] max-w-sm max-h-[85svh] overflow-y-auto p-5">
+      <DialogContent
+        style={{ maxHeight: `${vvh * 0.92}px` }}
+        className="w-[95vw] max-w-sm overflow-y-auto p-5 top-2 translate-y-0 sm:top-[50%] sm:translate-y-[-50%]"
+      >
         <DialogHeader>
           <DialogTitle>{emoji} {title}</DialogTitle>
           {description && (

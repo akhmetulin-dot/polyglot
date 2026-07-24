@@ -212,10 +212,12 @@ function WordDialog({
   open,
   onOpenChange,
   editingWord,
+  onManage,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   editingWord: Word | null;
+  onManage: (kind: "word_type" | "mnemonic_group" | "semantic_group") => void;
 }) {
   const vvh = useVisualViewportHeight();
   const queryClient = useQueryClient();
@@ -229,8 +231,6 @@ function WordDialog({
   const { data: wordTypeTags }    = useListTags({ kind: "word_type" },     { query: { enabled: open } as never });
   const { data: mnemoGroupTags }  = useListTags({ kind: "mnemonic_group" },{ query: { enabled: open } as never });
   const { data: semanticGroupTags}= useListTags({ kind: "semantic_group" },{ query: { enabled: open } as never });
-
-  const [managerOpen, setManagerOpen] = useState<"word_type" | "mnemonic_group" | "semantic_group" | null>(null);
 
   const emptyForm = () => ({
     russian: "", polish: "", german: "", english: "",
@@ -442,7 +442,7 @@ function WordDialog({
                 tags={wordTypeTags?.tags ?? []}
                 placeholder="Не указан"
                 useLabel={true}
-                onManage={() => { setManagerOpen("word_type"); }}
+                onManage={() => onManage("word_type")}
               />
             </div>
           </div>
@@ -455,7 +455,7 @@ function WordDialog({
               tags={mnemoGroupTags?.tags ?? []}
               placeholder={MNEMONIC_GROUP.placeholder}
               emoji={MNEMONIC_GROUP.emoji}
-              onManage={() => setManagerOpen("mnemonic_group")}
+              onManage={() => onManage("mnemonic_group")}
             />
             <p className="text-[11px] text-muted-foreground">{MNEMONIC_GROUP.hint}</p>
           </div>
@@ -468,7 +468,7 @@ function WordDialog({
               tags={semanticGroupTags?.tags ?? []}
               placeholder={SEMANTIC_GROUP.placeholder}
               emoji={SEMANTIC_GROUP.emoji}
-              onManage={() => setManagerOpen("semantic_group")}
+              onManage={() => onManage("semantic_group")}
             />
             <p className="text-[11px] text-muted-foreground">{SEMANTIC_GROUP.hint}</p>
           </div>
@@ -539,32 +539,6 @@ function WordDialog({
           </div>
         </DialogFooter>
       </DialogContent>
-
-      {/* Tag manager dialogs */}
-      <TagsManagerDialog
-        open={managerOpen === "word_type"}
-        onOpenChange={v => setManagerOpen(v ? "word_type" : null)}
-        kind="word_type"
-        title="Типы слов"
-        description="Переименуйте или добавьте новые типы. Существующие слова не изменятся."
-        separateValueLabel
-      />
-      <TagsManagerDialog
-        open={managerOpen === "mnemonic_group"}
-        onOpenChange={v => setManagerOpen(v ? "mnemonic_group" : null)}
-        kind="mnemonic_group"
-        title={MNEMONIC_GROUP.labelPlural}
-        emoji={MNEMONIC_GROUP.emoji}
-        description={MNEMONIC_GROUP.hint}
-      />
-      <TagsManagerDialog
-        open={managerOpen === "semantic_group"}
-        onOpenChange={v => setManagerOpen(v ? "semantic_group" : null)}
-        kind="semantic_group"
-        title={SEMANTIC_GROUP.labelPlural}
-        emoji={SEMANTIC_GROUP.emoji}
-        description={SEMANTIC_GROUP.hint}
-      />
     </Dialog>
   );
 }
@@ -654,6 +628,7 @@ export default function Words() {
 
   const [isTrashOpen, setIsTrashOpen] = useState(false);
   const [isDeletingTrash, setIsDeletingTrash] = useState(false);
+  const [managerKind, setManagerKind] = useState<"word_type" | "mnemonic_group" | "semantic_group" | null>(null);
 
   const { data: trashedWords, refetch: refetchTrash } = useListTrashedWords({ query: { enabled: isTrashOpen } as never });
   const restoreWord = useRestoreWord();
@@ -993,6 +968,33 @@ export default function Words() {
           }
         }}
         editingWord={editingWord}
+        onManage={(kind) => { setIsAddOpen(false); setTimeout(() => setManagerKind(kind), 150); }}
+      />
+
+      {/* Tag manager dialogs — rendered at page level (NOT nested inside WordDialog) to avoid portal conflicts */}
+      <TagsManagerDialog
+        open={managerKind === "word_type"}
+        onOpenChange={v => { setManagerKind(v ? "word_type" : null); if (!v) setIsAddOpen(true); }}
+        kind="word_type"
+        title="Типы слов"
+        description="Переименуйте или добавьте новые типы. Существующие слова не изменятся."
+        separateValueLabel
+      />
+      <TagsManagerDialog
+        open={managerKind === "mnemonic_group"}
+        onOpenChange={v => { setManagerKind(v ? "mnemonic_group" : null); if (!v) setIsAddOpen(true); }}
+        kind="mnemonic_group"
+        title={MNEMONIC_GROUP.labelPlural}
+        emoji={MNEMONIC_GROUP.emoji}
+        description={MNEMONIC_GROUP.hint}
+      />
+      <TagsManagerDialog
+        open={managerKind === "semantic_group"}
+        onOpenChange={v => { setManagerKind(v ? "semantic_group" : null); if (!v) setIsAddOpen(true); }}
+        kind="semantic_group"
+        title={SEMANTIC_GROUP.labelPlural}
+        emoji={SEMANTIC_GROUP.emoji}
+        description={SEMANTIC_GROUP.hint}
       />
 
 
