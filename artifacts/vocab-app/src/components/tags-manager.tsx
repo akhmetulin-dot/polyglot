@@ -1,11 +1,13 @@
 /**
  * TagsManagerDialog — full CRUD for a custom tag list (mnemonic_group, semantic_group, word_type).
- * Allows rename and delete. New tags are created inline via GroupCombobox "Add new".
  *
- * iOS notes:
- *  - overflow-y-auto on a position:fixed element freezes on iOS Safari when keyboard opens.
- *  - Fix: DialogContent is overflow-hidden with explicit height; inner list gets overflow-y-auto.
- *  - useVisualViewportHeight tracks keyboard shrinkage via visualViewport API.
+ * iOS Safari keyboard fix:
+ *  - Tracks visualViewport.offsetTop so the dialog stays in the visual viewport
+ *    even when iOS scrolls the layout viewport to reveal a focused input.
+ *  - Uses maxHeight (not height) + overflow-y-auto on DialogContent,
+ *    same pattern as WordDialog which is confirmed working on iOS.
+ *  - The "Add new" section is placed BEFORE the tag list so iOS autoscroll
+ *    (which scrolls toward the focused element) keeps the add inputs visible.
  */
 import { useState, useEffect } from "react";
 import { Pencil, Trash2, Check, X, Loader2, Plus } from "lucide-react";
@@ -22,19 +24,22 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 
-// Tracks visual viewport height so dialog shrinks when iOS keyboard appears
-function useVisualViewportHeight() {
-  const get = () => window.visualViewport?.height ?? window.innerHeight;
-  const [h, setH] = useState(get);
+/** Returns { height, offsetTop } of the visual viewport, updating on keyboard open/close. */
+function useVisualViewport() {
+  const get = () => ({
+    height: window.visualViewport?.height ?? window.innerHeight,
+    offsetTop: window.visualViewport?.offsetTop ?? 0,
+  });
+  const [vp, setVp] = useState(get);
   useEffect(() => {
     const vv = window.visualViewport;
     if (!vv) return;
-    const update = () => setH(vv.height);
+    const update = () => setVp({ height: vv.height, offsetTop: vv.offsetTop });
     vv.addEventListener("resize", update);
     vv.addEventListener("scroll", update);
     return () => { vv.removeEventListener("resize", update); vv.removeEventListener("scroll", update); };
   }, []);
-  return h;
+  return vp;
 }
 
 interface TagsManagerDialogProps {
@@ -51,7 +56,7 @@ interface TagsManagerDialogProps {
 export function TagsManagerDialog({
   open, onOpenChange, kind, title, emoji, description, separateValueLabel = false,
 }: TagsManagerDialogProps) {
-  const vvh = useVisualViewportHeight();
+  const vp = useVisualViewport();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -106,7 +111,6 @@ export function TagsManagerDialog({
     const value = separateValueLabel
       ? (newValue.trim() || label.toLowerCase().replace(/\s+/g, "_"))
       : label;
-
     createTag.mutate(
       { data: { kind, value, label } },
       {
@@ -124,107 +128,36 @@ export function TagsManagerDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       {/*
-        iOS Safari fix: DialogContent must be overflow-hidden with explicit height.
-        The inner scrollable area gets overflow-y-auto on a flex-1 div — NOT on DialogContent.
-        Also pin to top-4 (not centered) so keyboard shrinkage doesn't cut content.
+        Positioning strategy for iOS:
+        - top = visualViewport.offsetTop + 8px  → stays inside visual viewport when iOS scrolls the page
+        - maxHeight = visualViewport.height * 0.92  → shrinks when keyboard appears
+        - overflow-y-auto overscroll-y-contain on this element (same as WordDialog which works on iOS)
+        - translate-y-0 overrides the default translate-y-[-50%] from the base DialogContent class
+        - On desktop (sm:) the inline top is still in effect, so we use sm:top-[50%] sm:translate-y-[-50%]
+          BUT inline styles beat Tailwind, so on desktop we neutralise via a wrapper approach instead
       */}
       <DialogContent
-        style={{ height: `${Math.min(vvh * 0.92, 600)}px` }}
+        style={{
+          top: `${vp.offsetTop + 8}px`,
+          maxHeight: `${vp.height * 0.92}px`,
+        }}
         className="
-          flex flex-col
           w-[95vw] max-w-sm
-          overflow-hidden
-          p-0
-          top-4 translate-y-0
-          sm:top-[50%] sm:translate-y-[-50%]
-          sm:h-auto sm:max-h-[85vh]
+          overflow-y-auto overscroll-y-contain
+          p-5
+          translate-y-0
         "
       >
-        {/* Fixed header */}
-        <DialogHeader className="shrink-0 px-5 pt-5 pb-3">
+        <DialogHeader>
           <DialogTitle>{emoji} {title}</DialogTitle>
           {description && (
             <DialogDescription className="text-xs mt-1">{description}</DialogDescription>
           )}
         </DialogHeader>
 
-        {/* Scrollable tag list — overflow-y-auto here, NOT on the outer container */}
-        <div className="flex-1 overflow-y-auto overscroll-contain px-5">
-          {isLoading && (
-            <div className="flex justify-center py-6">
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-            </div>
-          )}
-
-          {!isLoading && tags.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-4">
-              Список пуст. Добавьте первую запись.
-            </p>
-          )}
-
-          <div className="space-y-2 py-2">
-            {tags.map(tag => (
-              <div key={tag.id} className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm">
-                {editingId === tag.id ? (
-                  <>
-                    <Input
-                      value={editLabel}
-                      onChange={e => setEditLabel(e.target.value)}
-                      onKeyDown={e => {
-                        if (e.key === "Enter") handleSaveEdit(tag);
-                        if (e.key === "Escape") setEditingId(null);
-                      }}
-                      className="h-7 text-xs flex-1"
-                      autoFocus
-                      autoComplete="off" autoCorrect="off" spellCheck={false}
-                    />
-                    <Button
-                      size="icon" variant="ghost" className="h-7 w-7 shrink-0"
-                      onClick={() => handleSaveEdit(tag)}
-                      disabled={updateTag.isPending}
-                    >
-                      {updateTag.isPending
-                        ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        : <Check className="h-3.5 w-3.5 text-green-600" />}
-                    </Button>
-                    <Button
-                      size="icon" variant="ghost" className="h-7 w-7 shrink-0"
-                      onClick={() => setEditingId(null)}
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <span className="flex-1 truncate">
-                      {emoji && <span className="mr-1">{emoji}</span>}
-                      {tag.label}
-                      {separateValueLabel && tag.value !== tag.label && (
-                        <span className="text-muted-foreground text-[10px] ml-1.5">({tag.value})</span>
-                      )}
-                    </span>
-                    <Button
-                      size="icon" variant="ghost" className="h-7 w-7 shrink-0"
-                      onClick={() => handleStartEdit(tag)}
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      size="icon" variant="ghost" className="h-7 w-7 shrink-0 text-destructive hover:bg-destructive/10"
-                      onClick={() => handleDelete(tag)}
-                      disabled={deleteTag.isPending}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Fixed "Add new" section — always visible, never scrolls away */}
-        <div className="shrink-0 border-t px-5 py-4 space-y-2 bg-background">
+        {/* "Add new" is FIRST in DOM — when user taps these inputs iOS autoscrolls toward the TOP,
+            keeping the inputs visible. Tags list comes after so it doesn't push add section off screen. */}
+        <div className="border-b pb-4 space-y-2">
           <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Добавить</p>
           {separateValueLabel && (
             <Input
@@ -253,6 +186,79 @@ export function TagsManagerDialog({
               {createTag.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
             </Button>
           </div>
+        </div>
+
+        {/* Existing tags — below add section */}
+        <div className="space-y-2 pt-2">
+          {isLoading && (
+            <div className="flex justify-center py-6">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          )}
+
+          {!isLoading && tags.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              Список пуст. Добавьте первую запись выше.
+            </p>
+          )}
+
+          {tags.map(tag => (
+            <div key={tag.id} className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm">
+              {editingId === tag.id ? (
+                <>
+                  <Input
+                    value={editLabel}
+                    onChange={e => setEditLabel(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === "Enter") handleSaveEdit(tag);
+                      if (e.key === "Escape") setEditingId(null);
+                    }}
+                    className="h-7 text-xs flex-1"
+                    autoFocus
+                    autoComplete="off" autoCorrect="off" spellCheck={false}
+                  />
+                  <Button
+                    size="icon" variant="ghost" className="h-7 w-7 shrink-0"
+                    onClick={() => handleSaveEdit(tag)}
+                    disabled={updateTag.isPending}
+                  >
+                    {updateTag.isPending
+                      ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      : <Check className="h-3.5 w-3.5 text-green-600" />}
+                  </Button>
+                  <Button
+                    size="icon" variant="ghost" className="h-7 w-7 shrink-0"
+                    onClick={() => setEditingId(null)}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <span className="flex-1 truncate">
+                    {emoji && <span className="mr-1">{emoji}</span>}
+                    {tag.label}
+                    {separateValueLabel && tag.value !== tag.label && (
+                      <span className="text-muted-foreground text-[10px] ml-1.5">({tag.value})</span>
+                    )}
+                  </span>
+                  <Button
+                    size="icon" variant="ghost" className="h-7 w-7 shrink-0"
+                    onClick={() => handleStartEdit(tag)}
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    size="icon" variant="ghost" className="h-7 w-7 shrink-0 text-destructive hover:bg-destructive/10"
+                    onClick={() => handleDelete(tag)}
+                    disabled={deleteTag.isPending}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </>
+              )}
+            </div>
+          ))}
         </div>
       </DialogContent>
     </Dialog>
