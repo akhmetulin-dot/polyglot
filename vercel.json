@@ -1,8 +1,7 @@
 {
-  "framework": null,
   "buildCommand": "pnpm --filter @workspace/vocab-app run build",
   "outputDirectory": "dist",
-  "installCommand": "pnpm install --frozen-lockfile",
+  "installCommand": "pnpm install",
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api" },
     { "source": "/(.*)", "destination": "/index.html" }
