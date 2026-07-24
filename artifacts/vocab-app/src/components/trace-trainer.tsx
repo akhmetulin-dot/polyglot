@@ -309,7 +309,9 @@ export function TraceTrainer({
     const nextStep = stepIndex + 1;
 
     if (nextStep >= passSequence.length) {
-      // All fields done → flash → advance pass or word
+      // All fields done → flash → advance pass or word.
+      // Park focus on bridge FIRST so iOS keyboard stays alive during the 400ms flash.
+      bridgeRef.current?.focus();
       setConfirmed(newConfirmed);
       setFlash(true);
       setTimeout(() => {
@@ -328,7 +330,9 @@ export function TraceTrainer({
         }
       }, 400);
     } else {
-      // Advance to next field in sequence — it will clear (drop from holdValues to active)
+      // Advance to next field in sequence.
+      // Park focus on bridge FIRST so iOS keyboard doesn't dismiss during re-render.
+      bridgeRef.current?.focus();
       setConfirmed(newConfirmed);
       setStepIndex(nextStep);
       setActiveInput("");
