@@ -3,6 +3,8 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Check, ArrowRight, PenLine, Pencil, Save } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
@@ -139,11 +141,15 @@ export function TraceTrainer({
   const pendingFocusId     = useRef<string | null>(null);
   const focusFirstOnRender = useRef(false);
 
-  // ── Mnemonic inline editing ──────────────────────────────────────────────
-  const [isEditingMnemonic, setIsEditingMnemonic] = useState(false);
-  const [mnemonicDraft, setMnemonicDraft]         = useState("");
-  // Local override so UI updates immediately after save without waiting for refetch
-  const [localMnemonic, setLocalMnemonic]         = useState<string | null | undefined>(undefined);
+  // ── Inline property editing ──────────────────────────────────────────────
+  const [isEditingProps, setIsEditingProps]           = useState(false);
+  const [mnemonicDraft, setMnemonicDraft]             = useState("");
+  const [wordGroupDraft, setWordGroupDraft]           = useState("");
+  const [semanticGroupDraft, setSemanticGroupDraft]   = useState("");
+  // Local overrides so UI updates immediately after save without waiting for refetch
+  const [localMnemonic, setLocalMnemonic]             = useState<string | null | undefined>(undefined);
+  const [localWordGroup, setLocalWordGroup]           = useState<string | null | undefined>(undefined);
+  const [localSemanticGroup, setLocalSemanticGroup]   = useState<string | null | undefined>(undefined);
   const mnemonicRef  = useRef<HTMLTextAreaElement>(null);
   const updateWord   = useUpdateWord();
   const queryClient  = useQueryClient();
@@ -170,33 +176,51 @@ export function TraceTrainer({
     focusFirstOnRender.current = true;
   }, [wordIndex, repetitions]);
 
-  // Reset mnemonic editing state when the actual word id changes
+  // Reset editing state when the actual word id changes
   useEffect(() => {
     setLocalMnemonic(undefined);
-    setIsEditingMnemonic(false);
+    setLocalWordGroup(undefined);
+    setLocalSemanticGroup(undefined);
+    setIsEditingProps(false);
     setMnemonicDraft("");
+    setWordGroupDraft("");
+    setSemanticGroupDraft("");
   }, [current?.id]);
 
-  const displayMnemonic = localMnemonic !== undefined ? localMnemonic : current?.mnemonic;
+  const displayMnemonic      = localMnemonic      !== undefined ? localMnemonic      : current?.mnemonic;
+  const displayWordGroup     = localWordGroup     !== undefined ? localWordGroup     : current?.wordGroup;
+  const displaySemanticGroup = localSemanticGroup !== undefined ? localSemanticGroup : current?.semanticGroup;
 
-  const handleStartEditMnemonic = () => {
+  const handleStartEditProps = () => {
     setMnemonicDraft(displayMnemonic || "");
-    setIsEditingMnemonic(true);
+    setWordGroupDraft(displayWordGroup || "");
+    setSemanticGroupDraft(displaySemanticGroup || "");
+    setIsEditingProps(true);
     setTimeout(() => mnemonicRef.current?.focus(), 50);
   };
 
-  const handleSaveMnemonic = () => {
+  const handleSaveProps = () => {
     if (!current) return;
-    const trimmed = mnemonicDraft.trim() || null;
+    const mnemonic      = mnemonicDraft      || null;
+    const wordGroup     = wordGroupDraft.trim()     || null;
+    const semanticGroup = semanticGroupDraft.trim() || null;
     updateWord.mutate(
-      { id: current.id, data: { mnemonic: trimmed ?? undefined } },
+      {
+        id: current.id,
+        data: {
+          mnemonic:      mnemonic      ?? undefined,
+          wordGroup:     wordGroup     ?? undefined,
+          semanticGroup: semanticGroup ?? undefined,
+        },
+      },
       {
         onSuccess: () => {
           // Update local display immediately — no list invalidation to avoid
           // causing the parent to refetch and reset the trainer mid-session.
-          // Individual word cache and full list are invalidated when session ends.
-          setLocalMnemonic(trimmed);
-          setIsEditingMnemonic(false);
+          setLocalMnemonic(mnemonic);
+          setLocalWordGroup(wordGroup);
+          setLocalSemanticGroup(semanticGroup);
+          setIsEditingProps(false);
           queryClient.invalidateQueries({ queryKey: getGetWordQueryKey(current.id) });
         },
       }
@@ -360,35 +384,65 @@ export function TraceTrainer({
   );
 
   const referenceCard = (
-    <div className="py-3 px-3 border rounded-xl bg-muted/30 space-y-1">
+    <div className="py-3 px-3 border rounded-xl bg-muted/30 space-y-1.5">
       <p className="font-bold font-serif text-2xl leading-tight">{current.russian}</p>
       <p className="text-sm text-muted-foreground whitespace-nowrap overflow-x-auto scrollbar-none">
         {translationLine}
       </p>
-      {/* Mnemonic — inline editable */}
+
+      {/* Property panel — inline editable (mnemonic + wordGroup + semanticGroup) */}
       <div className="group pt-0.5">
-        {isEditingMnemonic ? (
-          <div className="space-y-2">
-            <Textarea
-              ref={mnemonicRef}
-              value={mnemonicDraft}
-              onChange={e => setMnemonicDraft(e.target.value)}
-              placeholder="Напишите свою подсказку..."
-              className="text-xs resize-none bg-background min-h-[52px]"
-              rows={2}
-              autoComplete="off"
-              autoCorrect="off"
-              spellCheck={false}
-              onKeyDown={e => {
-                if (e.key === "Escape") setIsEditingMnemonic(false);
-              }}
-            />
+        {isEditingProps ? (
+          <div className="space-y-3">
+            {/* Mnemonic textarea */}
+            <div className="space-y-1">
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Мнемоника</Label>
+              <Textarea
+                ref={mnemonicRef}
+                value={mnemonicDraft}
+                onChange={e => setMnemonicDraft(e.target.value)}
+                placeholder="Напишите свою подсказку... (Enter = новая строка)"
+                className="text-xs resize-none bg-background min-h-[52px]"
+                rows={3}
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck={false}
+                onKeyDown={e => {
+                  if (e.key === "Escape") setIsEditingProps(false);
+                }}
+              />
+            </div>
+            {/* Groups row */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">🧠 Мнемо-группа</Label>
+                <Input
+                  value={wordGroupDraft}
+                  onChange={e => setWordGroupDraft(e.target.value)}
+                  placeholder="дерево-23…"
+                  className="h-7 text-xs"
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">≈ Смысл-группа</Label>
+                <Input
+                  value={semanticGroupDraft}
+                  onChange={e => setSemanticGroupDraft(e.target.value)}
+                  placeholder="начать…"
+                  className="h-7 text-xs"
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+              </div>
+            </div>
             <div className="flex gap-2">
-              <Button size="sm" onClick={handleSaveMnemonic} disabled={updateWord.isPending} className="h-7 text-xs">
+              <Button size="sm" onClick={handleSaveProps} disabled={updateWord.isPending} className="h-7 text-xs">
                 <Save className="h-3 w-3 mr-1" />
                 {updateWord.isPending ? "Сохраняю..." : "Сохранить"}
               </Button>
-              <Button size="sm" variant="ghost" onClick={() => setIsEditingMnemonic(false)} className="h-7 text-xs">
+              <Button size="sm" variant="ghost" onClick={() => setIsEditingProps(false)} className="h-7 text-xs">
                 Отмена
               </Button>
             </div>
@@ -396,14 +450,30 @@ export function TraceTrainer({
         ) : (
           <div
             className="flex items-start gap-1.5 cursor-pointer rounded-lg px-1 py-0.5 -mx-1 hover:bg-primary/10 transition-colors"
-            onClick={handleStartEditMnemonic}
-            title="Нажмите чтобы изменить подсказку"
+            onClick={handleStartEditProps}
+            title="Нажмите чтобы редактировать"
           >
-            {displayMnemonic ? (
-              <p className="text-xs text-primary/60 italic flex-1 leading-relaxed">"{displayMnemonic}"</p>
-            ) : (
-              <p className="text-xs text-muted-foreground/50 flex-1">+ добавить подсказку</p>
-            )}
+            <div className="flex-1 space-y-1 min-w-0">
+              {displayMnemonic ? (
+                <p className="text-xs text-primary/60 italic leading-relaxed whitespace-pre-wrap">"{displayMnemonic}"</p>
+              ) : (
+                <p className="text-xs text-muted-foreground/50">+ добавить мнемонику</p>
+              )}
+              {(displayWordGroup || displaySemanticGroup) && (
+                <div className="flex gap-1.5 flex-wrap">
+                  {displayWordGroup && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 leading-none">
+                      🧠 {displayWordGroup}
+                    </span>
+                  )}
+                  {displaySemanticGroup && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400 leading-none">
+                      ≈ {displaySemanticGroup}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
             <Pencil className="h-3 w-3 text-muted-foreground/30 group-hover:text-primary/50 shrink-0 mt-0.5 transition-colors" />
           </div>
         )}

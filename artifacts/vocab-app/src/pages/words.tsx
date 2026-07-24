@@ -179,7 +179,7 @@ const WordRow = memo(function WordRow({
         </p>
       )}
       {word.mnemonic && (
-        <p className="text-xs text-primary/60 italic mt-1 leading-relaxed break-words">{word.mnemonic}</p>
+        <p className="text-xs text-primary/60 italic mt-1 leading-relaxed break-words whitespace-pre-wrap">{word.mnemonic}</p>
       )}
       {(word.wordGroup || word.semanticGroup) && (
         <div className="flex gap-1.5 mt-1.5 flex-wrap">

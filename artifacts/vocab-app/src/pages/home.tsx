@@ -35,6 +35,22 @@ export default function Home() {
     .filter(k => typeCounts[k])
     .map(k => ({ key: k, label: TYPE_LABELS[k], count: typeCounts[k] }));
 
+  // ── "Не заполнено" по полям ─────────────────────────────────────────────────
+  const total = stats.totalWords;
+  const noMnemonic      = words.filter(w => !w.mnemonic).length;
+  const noTranslation   = words.filter(w => !w.polish && !w.german && !w.english).length;
+  const noType          = words.filter(w => !w.wordType).length;
+  const noMnemoGroup    = words.filter(w => !w.wordGroup).length;
+  const noSemanticGroup = words.filter(w => !w.semanticGroup).length;
+
+  const gapRows = [
+    { label: "без мнемоники",     count: noMnemonic },
+    { label: "без перевода",       count: noTranslation },
+    { label: "без типа",           count: noType },
+    { label: "без мнемо-группы",   count: noMnemoGroup },
+    { label: "без смысл-группы",   count: noSemanticGroup },
+  ].filter(r => r.count > 0);
+
   // ── Breakdown by wordGroup (мнемонические) ──────────────────────────────────
   const mnemoGroupCounts = words.reduce<Record<string, number>>((acc, w) => {
     if (!w.wordGroup) return acc;
@@ -119,6 +135,24 @@ export default function Home() {
         </div>
 
       </div>
+
+      {/* ── Не заполнено ── */}
+      {total > 0 && gapRows.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <p className="text-xs uppercase tracking-widest text-muted-foreground font-semibold">Не заполнено</p>
+          <div className="flex flex-col gap-3">
+            {gapRows.map(({ label, count }) => (
+              <div key={label}>
+                <div className="flex justify-between mb-1.5">
+                  <span className="text-sm text-muted-foreground">{label}</span>
+                  <span className="text-sm font-bold tabular-nums text-destructive/70">{count} <span className="text-muted-foreground font-normal">/ {total}</span></span>
+                </div>
+                <Progress value={((total - count) / total) * 100} className="h-0.5 [&>div]:bg-destructive/40" />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── По типу слова ── */}
       {typeRows.length > 0 && (
