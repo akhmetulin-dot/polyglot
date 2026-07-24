@@ -35,15 +35,21 @@ export default function Home() {
     .filter(k => typeCounts[k])
     .map(k => ({ key: k, label: TYPE_LABELS[k], count: typeCounts[k] }));
 
-  // ── Breakdown by wordGroup ───────────────────────────────────────────────────
-  const groupCounts = words.reduce<Record<string, number>>((acc, w) => {
+  // ── Breakdown by wordGroup (мнемонические) ──────────────────────────────────
+  const mnemoGroupCounts = words.reduce<Record<string, number>>((acc, w) => {
     if (!w.wordGroup) return acc;
     acc[w.wordGroup] = (acc[w.wordGroup] ?? 0) + 1;
     return acc;
   }, {});
+  const mnemoGroupRows = Object.entries(mnemoGroupCounts).sort(([, a], [, b]) => b - a);
 
-  const groupRows = Object.entries(groupCounts)
-    .sort(([, a], [, b]) => b - a);   // по убыванию
+  // ── Breakdown by semanticGroup (смысловые) ───────────────────────────────────
+  const semanticGroupCounts = words.reduce<Record<string, number>>((acc, w) => {
+    if (!w.semanticGroup) return acc;
+    acc[w.semanticGroup] = (acc[w.semanticGroup] ?? 0) + 1;
+    return acc;
+  }, {});
+  const semanticGroupRows = Object.entries(semanticGroupCounts).sort(([, a], [, b]) => b - a);
 
   return (
     <div className="flex flex-col gap-16 pb-12 pt-4 animate-in fade-in duration-500">
@@ -132,12 +138,30 @@ export default function Home() {
         </div>
       )}
 
-      {/* ── По смысловым группам ── */}
-      {groupRows.length > 0 && (
+      {/* ── По мнемоническим группам ── */}
+      {mnemoGroupRows.length > 0 && (
         <div className="flex flex-col gap-3">
-          <p className="text-xs uppercase tracking-widest text-muted-foreground font-semibold">По группам</p>
+          <p className="text-xs uppercase tracking-widest text-muted-foreground font-semibold">🧠 Мнемо-группы</p>
           <div className="flex flex-col gap-3">
-            {groupRows.map(([group, count]) => (
+            {mnemoGroupRows.map(([group, count]) => (
+              <div key={group}>
+                <div className="flex justify-between mb-1.5">
+                  <span className="text-sm text-muted-foreground">{group}</span>
+                  <span className="text-sm font-bold tabular-nums">{count}</span>
+                </div>
+                <Progress value={(count / stats.totalWords) * 100} className="h-0.5" />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── По смысловым группам ── */}
+      {semanticGroupRows.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <p className="text-xs uppercase tracking-widest text-muted-foreground font-semibold">≈ Смысл-группы</p>
+          <div className="flex flex-col gap-3">
+            {semanticGroupRows.map(([group, count]) => (
               <div key={group}>
                 <div className="flex justify-between mb-1.5">
                   <span className="text-sm text-muted-foreground">{group}</span>
