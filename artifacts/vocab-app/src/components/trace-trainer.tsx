@@ -29,12 +29,10 @@ interface TraceTrainerProps {
   headerRight?: ReactNode;
 }
 
-interface RowState {
+interface PassFields {
   pl: string;
   de: string;
   en: string;
-  done: boolean;
-  flash: boolean;
 }
 
 type Field = "pl" | "de" | "en";
@@ -136,9 +134,9 @@ export function TraceTrainer({
   headerRight,
 }: TraceTrainerProps) {
   const [wordIndex, setWordIndex]           = useState(0);
-  const [rows, setRows]                     = useState<RowState[]>(() =>
-    Array.from({ length: repetitions }, () => ({ pl: "", de: "", en: "", done: false, flash: false }))
-  );
+  const [passIndex, setPassIndex]           = useState(0);
+  const [fields, setFields]                 = useState<PassFields>({ pl: "", de: "", en: "" });
+  const [flash, setFlash]                   = useState(false);
   const [completedWords, setCompletedWords] = useState(0);
   const [finished, setFinished]             = useState(false);
   const firstInputRef      = useRef<HTMLInputElement>(null);
@@ -184,9 +182,11 @@ export function TraceTrainer({
 
   const current: Word | undefined = words[wordIndex];
 
-  // Reset rows when word changes
+  // Reset pass state when word changes
   useEffect(() => {
-    setRows(Array.from({ length: repetitions }, () => ({ pl: "", de: "", en: "", done: false, flash: false })));
+    setPassIndex(0);
+    setFields({ pl: "", de: "", en: "" });
+    setFlash(false);
     focusFirstOnRender.current = true;
   }, [wordIndex, repetitions]);
 
@@ -263,89 +263,75 @@ export function TraceTrainer({
     queryClient.invalidateQueries({ queryKey: getListWordsQueryKey() });
   };
 
-  // ── Advance to next word when ALL rows are done ──────────────────────────
-  useEffect(() => {
-    if (finished) return;
-    if (rows.length === 0 || !rows.every(r => r.done)) return;
-    const next = wordIndex + 1;
+  const norm = (s: string) => s.trim().toLowerCase();
+
+  /** Called when user finishes the last pass of the current word */
+  const advanceWord = () => {
     setCompletedWords(c => c + 1);
-    // Increment trace count for the completed word (fire-and-forget)
-    if (current?.id) {
-      recordTrace.mutate({ id: current.id });
-    }
-    if (next >= words.length) {
+    if (current?.id) recordTrace.mutate({ id: current.id });
+    const nextWord = wordIndex + 1;
+    if (nextWord >= words.length) {
       setFinished(true);
       invalidateListOnFinish();
       onFinish?.();
     } else {
-      setWordIndex(next);
+      setWordIndex(nextWord);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows]);
+  };
 
-  const norm = (s: string) => s.trim().toLowerCase();
+  const handleChange = (field: Field, value: string) => {
+    if (!current || flash) return;
 
-  const handleChange = (rowIndex: number, field: Field, value: string) => {
-    if (!current) return;
-    if (rows[rowIndex].done) return;
+    const newFields = { ...fields, [field]: value };
 
-    const row = { ...rows[rowIndex], [field]: value };
-
-    const plOk = !current.polish  || norm(row.pl) === norm(current.polish  ?? "");
-    const deOk = !current.german  || norm(row.de) === norm(current.german  ?? "");
-    const enOk = !current.english || norm(row.en) === norm(current.english ?? "");
+    const plOk = !current.polish  || norm(newFields.pl) === norm(current.polish  ?? "");
+    const deOk = !current.german  || norm(newFields.de) === norm(current.german  ?? "");
+    const enOk = !current.english || norm(newFields.en) === norm(current.english ?? "");
 
     const fieldTarget =
       field === "pl" ? current.polish :
       field === "de" ? current.german : current.english;
     const isCurrentCorrect = !!fieldTarget && norm(value) === norm(fieldTarget);
-    const rowWillBeDone    = plOk && deOk && enOk;
+    const passDone = plOk && deOk && enOk;
 
-    // Field order for THIS row (forward or backward based on row parity)
-    const fieldOrder = getRowFields(rowIndex, current);
+    // Field order for current pass direction (even = forward, odd = backward)
+    const fieldOrder = getRowFields(passIndex, current);
 
-    if (rowWillBeDone) {
-      const next = rows.map((r, i) =>
-        i === rowIndex ? { ...row, done: true, flash: true } : r
-      );
-      const allDone = next.every(r => r.done);
-
-      if (allDone) {
-        bridgeRef.current?.focus();
-      } else {
-        // Focus the first field of the next undone row (respecting that row's direction)
-        const firstUndone = next.findIndex(x => !x.done);
-        const nextRowFirstField = getRowFields(firstUndone, current)[0];
-        pendingFocusId.current = `trace-input-${firstUndone}-${nextRowFirstField}`;
-      }
-
-      setRows(next);
+    if (passDone) {
+      // Flash green, then either start next pass (same row clears + reverses) or advance word
+      setFields(newFields);
+      setFlash(true);
       setTimeout(() => {
-        setRows(r => r.map((x, i) => i === rowIndex ? { ...x, flash: false } : x));
+        setFlash(false);
+        const nextPass = passIndex + 1;
+        if (nextPass >= repetitions) {
+          advanceWord();
+        } else {
+          setPassIndex(nextPass);
+          setFields({ pl: "", de: "", en: "" });
+          focusFirstOnRender.current = true;
+        }
       }, 400);
+      return;
+    }
 
-    } else if (isCurrentCorrect) {
-      // ── Auto-advance to next field in this row's direction ──
+    setFields(newFields);
+
+    if (isCurrentCorrect) {
+      // Auto-advance to next field in current pass direction
       const fieldIdx = fieldOrder.indexOf(field);
       if (fieldIdx < fieldOrder.length - 1) {
         const nextField  = fieldOrder[fieldIdx + 1];
-        const nextTarget =
-          nextField === "pl" ? current.polish :
-          nextField === "de" ? current.german : current.english;
-        const nextAlreadyOk = !!nextTarget && norm(row[nextField]) === norm(nextTarget);
-        if (!nextAlreadyOk) pendingFocusId.current = `trace-input-${rowIndex}-${nextField}`;
+        const nextTarget = nextField === "pl" ? current.polish : nextField === "de" ? current.german : current.english;
+        const nextAlreadyOk = !!nextTarget && norm(newFields[nextField]) === norm(nextTarget ?? "");
+        if (!nextAlreadyOk) pendingFocusId.current = `trace-input-${nextField}`;
       } else {
-        // Last field in direction done but row not complete → wrap to first unfilled in direction
+        // Last field in direction done but pass not complete → wrap to first unfilled
         const firstField  = fieldOrder[0];
-        const firstTarget =
-          firstField === "pl" ? current.polish :
-          firstField === "de" ? current.german : current.english;
-        const firstAlreadyOk = !!firstTarget && norm(row[firstField]) === norm(firstTarget);
-        if (!firstAlreadyOk) pendingFocusId.current = `trace-input-${rowIndex}-${firstField}`;
+        const firstTarget = firstField === "pl" ? current.polish : firstField === "de" ? current.german : current.english;
+        const firstAlreadyOk = !!firstTarget && norm(newFields[firstField]) === norm(firstTarget ?? "");
+        if (!firstAlreadyOk) pendingFocusId.current = `trace-input-${firstField}`;
       }
-      setRows(rows.map((r, i) => i === rowIndex ? row : r));
-    } else {
-      setRows(rows.map((r, i) => i === rowIndex ? row : r));
     }
   };
 
@@ -386,7 +372,9 @@ export function TraceTrainer({
             setFinished(false);
             setCompletedWords(0);
             setWordIndex(0);
-            setRows(Array.from({ length: repetitions }, () => ({ pl: "", de: "", en: "", done: false, flash: false })));
+            setPassIndex(0);
+            setFields({ pl: "", de: "", en: "" });
+            setFlash(false);
           }}>
             Ещё раз
           </Button>
@@ -399,7 +387,8 @@ export function TraceTrainer({
 
   if (!current) return null;
 
-  const progressPercent = (completedWords / words.length) * 100;
+  // Fractional progress: include partial progress within current word
+  const progressPercent = ((completedWords + passIndex / repetitions) / words.length) * 100;
   const hasPl = !!current.polish;
   const haDe  = !!current.german;
   const hasEn = !!current.english;
@@ -514,46 +503,47 @@ export function TraceTrainer({
     </div>
   );
 
+  // Current pass direction: even = forward PL→DE→EN, odd = backward EN→DE→PL
+  const passFields = getRowFields(passIndex, current);
+  const fieldActive: Record<Field, boolean> = { pl: hasPl, de: haDe, en: hasEn };
+
+  // Pass-progress dots (shown only when repetitions > 1)
+  const passDots = repetitions > 1 && (
+    <div className="flex items-center gap-1.5 justify-center pt-1">
+      {Array.from({ length: repetitions }, (_, i) => (
+        <div
+          key={i}
+          className={cn(
+            "h-1.5 rounded-full transition-all duration-300",
+            i < passIndex  ? "w-5 bg-green-400/70" :
+            i === passIndex ? "w-5 bg-primary" : "w-2 bg-muted-foreground/25",
+          )}
+        />
+      ))}
+    </div>
+  );
+
   const inputRows = (
-    <div className="space-y-4">
-      {rows.map((row, i) => {
-        const isLocked = !row.done && !rows.slice(0, i).every(r => r.done);
-        // Ordered fields for this row: even → PL DE EN, odd → EN DE PL (каток)
-        const rowFields = getRowFields(i, current);
-        const rowFirstField = rowFields[0];
-
-        const fieldConfig: Record<Field, { hint: string; value: string; lang: string }> = {
-          pl: { hint: current.polish  ?? "", value: row.pl, lang: "pl" },
-          de: { hint: current.german  ?? "", value: row.de, lang: "de" },
-          en: { hint: current.english ?? "", value: row.en, lang: "en" },
-        };
-        const fieldActive: Record<Field, boolean> = { pl: hasPl, de: haDe, en: hasEn };
-
-        return (
-          <div
-            key={i}
-            className={cn(
-              "flex gap-3 w-full overflow-x-auto scrollbar-none transition-opacity duration-300",
-              row.flash && "success-pulse",
-              isLocked && "opacity-35 pointer-events-none",
-            )}
-          >
-            {rowFields.filter(f => fieldActive[f]).map(f => (
-              <FieldInput
-                key={f}
-                ref={i === 0 && f === rowFirstField ? firstInputRef : undefined}
-                id={`trace-input-${i}-${f}`}
-                hint={fieldConfig[f].hint}
-                value={fieldConfig[f].value}
-                onChange={v => handleChange(i, f, v)}
-                onFocus={handleInputFocus}
-                done={row.done}
-                lang={fieldConfig[f].lang}
-              />
-            ))}
-          </div>
-        );
-      })}
+    <div className="space-y-2">
+      <div className={cn(
+        "flex gap-3 w-full overflow-x-auto scrollbar-none transition-opacity duration-300",
+        flash && "success-pulse",
+      )}>
+        {passFields.filter(f => fieldActive[f]).map((f, idx) => (
+          <FieldInput
+            key={f}
+            ref={idx === 0 ? firstInputRef : undefined}
+            id={`trace-input-${f}`}
+            hint={f === "pl" ? (current.polish ?? "") : f === "de" ? (current.german ?? "") : (current.english ?? "")}
+            value={fields[f]}
+            onChange={v => handleChange(f, v)}
+            onFocus={handleInputFocus}
+            done={flash}
+            lang={f}
+          />
+        ))}
+      </div>
+      {passDots}
     </div>
   );
 
