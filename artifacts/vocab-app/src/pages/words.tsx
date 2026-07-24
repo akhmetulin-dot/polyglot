@@ -812,10 +812,10 @@ export default function Words() {
         {availableGroups.length > 0 && (
           <Select value={filterGroup} onValueChange={setFilterGroup}>
             <SelectTrigger className="sm:w-[170px]">
-              <SelectValue placeholder={MNEMONIC_GROUP.label} />
+              <SelectValue placeholder={MNEMONIC_GROUP.labelPlural} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">{MNEMONIC_GROUP.emoji} Все {MNEMONIC_GROUP.label.toLowerCase()}ы</SelectItem>
+              <SelectItem value="all">{MNEMONIC_GROUP.emoji} {MNEMONIC_GROUP.labelAll}</SelectItem>
               {availableGroups.map(g => (
                 <SelectItem key={g} value={g}>{MNEMONIC_GROUP.emoji} {g}</SelectItem>
               ))}
@@ -825,10 +825,10 @@ export default function Words() {
         {availableSemanticGroups.length > 0 && (
           <Select value={filterSemanticGroup} onValueChange={setFilterSemanticGroup}>
             <SelectTrigger className="sm:w-[170px]">
-              <SelectValue placeholder={SEMANTIC_GROUP.label} />
+              <SelectValue placeholder={SEMANTIC_GROUP.labelPlural} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">{SEMANTIC_GROUP.emoji} Все {SEMANTIC_GROUP.label.toLowerCase()}ы</SelectItem>
+              <SelectItem value="all">{SEMANTIC_GROUP.emoji} {SEMANTIC_GROUP.labelAll}</SelectItem>
               {availableSemanticGroups.map(g => (
                 <SelectItem key={g} value={g}>{SEMANTIC_GROUP.emoji} {g}</SelectItem>
               ))}

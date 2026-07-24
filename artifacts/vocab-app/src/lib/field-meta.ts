@@ -8,6 +8,10 @@
 export const MNEMONIC_GROUP = {
   /** Short display label used in badges, filter dropdowns, dashboard headings */
   label: "Мнемо-группа",
+  /** Plural form for headings ("Мнемо-группы") */
+  labelPlural: "Мнемо-группы",
+  /** "All …" option in filter dropdowns */
+  labelAll: "Все мнемо-группы",
   /** Full label used in form fields */
   labelFull: "Мнемоническая группа",
   /** Prefix emoji shown in badges and headings */
@@ -20,6 +24,8 @@ export const MNEMONIC_GROUP = {
 
 export const SEMANTIC_GROUP = {
   label: "Смысл-группа",
+  labelPlural: "Смысл-группы",
+  labelAll: "Все смысл-группы",
   labelFull: "Смысловая группа",
   emoji: "≈",
   placeholder: "начать, убивать…",

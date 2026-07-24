@@ -176,7 +176,7 @@ export default function Home() {
       {/* ── По мнемоническим группам ── */}
       {mnemoGroupRows.length > 0 && (
         <div className="flex flex-col gap-3">
-          <p className="text-xs uppercase tracking-widest text-muted-foreground font-semibold">{MNEMONIC_GROUP.emoji} {MNEMONIC_GROUP.label}ы</p>
+          <p className="text-xs uppercase tracking-widest text-muted-foreground font-semibold">{MNEMONIC_GROUP.emoji} {MNEMONIC_GROUP.labelPlural}</p>
           <div className="flex flex-col gap-3">
             {mnemoGroupRows.map(([group, count]) => (
               <div key={group}>
@@ -194,7 +194,7 @@ export default function Home() {
       {/* ── По смысловым группам ── */}
       {semanticGroupRows.length > 0 && (
         <div className="flex flex-col gap-3">
-          <p className="text-xs uppercase tracking-widest text-muted-foreground font-semibold">{SEMANTIC_GROUP.emoji} {SEMANTIC_GROUP.label}ы</p>
+          <p className="text-xs uppercase tracking-widest text-muted-foreground font-semibold">{SEMANTIC_GROUP.emoji} {SEMANTIC_GROUP.labelPlural}</p>
           <div className="flex flex-col gap-3">
             {semanticGroupRows.map(([group, count]) => (
               <div key={group}>
