@@ -12,10 +12,14 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   useUpdateWord,
   useRecordWordTrace,
+  useListTags,
+  useCreateTag,
   getListWordsQueryKey,
   getGetWordQueryKey,
+  getListTagsQueryKey,
 } from "@workspace/api-client-react";
 import type { Word } from "@workspace/api-client-react";
+import { GroupCombobox } from "@/components/group-combobox";
 
 interface TraceTrainerProps {
   words: Word[];
@@ -155,7 +159,14 @@ export function TraceTrainer({
   const mnemonicRef  = useRef<HTMLTextAreaElement>(null);
   const updateWord      = useUpdateWord();
   const recordTrace     = useRecordWordTrace();
+  const createTag       = useCreateTag();
   const queryClient     = useQueryClient();
+
+  // Load group tags for the comboboxes (enabled only while editing)
+  const { data: mnemoGroupData }    = useListTags({ kind: "mnemonic_group" }, { query: { enabled: isEditingProps } as never });
+  const { data: semanticGroupData } = useListTags({ kind: "semantic_group" }, { query: { enabled: isEditingProps } as never });
+  const mnemoGroupTags    = mnemoGroupData?.tags    ?? [];
+  const semanticGroupTags = semanticGroupData?.tags ?? [];
 
   // Apply pending focus after every render (iOS-safe: runs in commit phase)
   useEffect(() => {
@@ -202,11 +213,28 @@ export function TraceTrainer({
     setTimeout(() => mnemonicRef.current?.focus(), 50);
   };
 
+  // Auto-create a tag if user typed a new group name not yet in the list
+  const ensureTag = (kind: string, value: string, existingTags: { value: string }[]) => {
+    if (!value.trim()) return;
+    const exists = existingTags.some(t => t.value.toLowerCase() === value.trim().toLowerCase());
+    if (!exists) {
+      createTag.mutate(
+        { data: { kind, value: value.trim(), label: value.trim() } },
+        { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListTagsQueryKey({ kind }) }) }
+      );
+    }
+  };
+
   const handleSaveProps = () => {
     if (!current) return;
     const mnemonic      = mnemonicDraft      || null;
     const wordGroup     = wordGroupDraft.trim()     || null;
     const semanticGroup = semanticGroupDraft.trim() || null;
+
+    // Auto-create new group tags if needed
+    if (wordGroup)     ensureTag("mnemonic_group", wordGroup,     mnemoGroupTags);
+    if (semanticGroup) ensureTag("semantic_group", semanticGroup, semanticGroupTags);
+
     updateWord.mutate(
       {
         id: current.id,
@@ -423,24 +451,22 @@ export function TraceTrainer({
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1">
                 <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">{MNEMONIC_GROUP.emoji} {MNEMONIC_GROUP.label}</Label>
-                <Input
+                <GroupCombobox
                   value={wordGroupDraft}
-                  onChange={e => setWordGroupDraft(e.target.value)}
+                  onChange={setWordGroupDraft}
+                  tags={mnemoGroupTags}
                   placeholder={MNEMONIC_GROUP.placeholder}
-                  className="h-7 text-xs"
-                  autoComplete="off"
-                  spellCheck={false}
+                  emoji={MNEMONIC_GROUP.emoji}
                 />
               </div>
               <div className="space-y-1">
                 <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">{SEMANTIC_GROUP.emoji} {SEMANTIC_GROUP.label}</Label>
-                <Input
+                <GroupCombobox
                   value={semanticGroupDraft}
-                  onChange={e => setSemanticGroupDraft(e.target.value)}
+                  onChange={setSemanticGroupDraft}
+                  tags={semanticGroupTags}
                   placeholder={SEMANTIC_GROUP.placeholder}
-                  className="h-7 text-xs"
-                  autoComplete="off"
-                  spellCheck={false}
+                  emoji={SEMANTIC_GROUP.emoji}
                 />
               </div>
             </div>
