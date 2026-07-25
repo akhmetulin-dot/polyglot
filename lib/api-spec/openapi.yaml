@@ -22,8 +22,150 @@ tags:
     description: Learning statistics
   - name: tags
     description: Custom tag lists (word types, mnemonic groups, semantic groups)
+  - name: mindmaps
+    description: Mind map storage and sync for the mindmap PWA
 
 paths:
+  /mindmaps:
+    get:
+      operationId: listMindmaps
+      tags: [mindmaps]
+      summary: List all mind maps with metadata
+      responses:
+        "200":
+          description: List of maps
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MindmapListResponse"
+    post:
+      operationId: createMindmap
+      tags: [mindmaps]
+      summary: Create a new mind map
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MindmapInput"
+      responses:
+        "201":
+          description: Created map
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Mindmap"
+
+  /mindmaps/{id}:
+    get:
+      operationId: getMindmap
+      tags: [mindmaps]
+      summary: Get a mind map with all its nodes
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Map with nodes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MindmapWithNodes"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateMindmap
+      tags: [mindmaps]
+      summary: Rename a mind map
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MindmapUpdate"
+      responses:
+        "200":
+          description: Updated map
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Mindmap"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteMindmap
+      tags: [mindmaps]
+      summary: Delete a mind map with all nodes
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /mindmaps/{id}/nodes:
+    put:
+      operationId: syncMindmapNodes
+      tags: [mindmaps]
+      summary: Replace all nodes of a map with a client snapshot (offline sync)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MindmapNodesSnapshot"
+      responses:
+        "200":
+          description: Snapshot accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Mindmap"
+        "404":
+          description: Map not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Server has newer data than the client base revision
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MindmapWithNodes"
+
   /healthz:
     get:
       operationId: healthCheck
@@ -520,6 +662,99 @@ paths:
 
 components:
   schemas:
+    Mindmap:
+      type: object
+      required: [id, title, revision, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          description: Client-generated UUID
+        title:
+          type: string
+        revision:
+          type: integer
+          description: Server revision counter, incremented on every nodes snapshot accepted
+        nodeCount:
+          type: integer
+          description: Number of nodes in this map
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    MindmapInput:
+      type: object
+      required: [id, title]
+      properties:
+        id:
+          type: string
+          description: Client-generated UUID
+        title:
+          type: string
+          minLength: 1
+
+    MindmapUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+
+    MindmapListResponse:
+      type: object
+      required: [maps]
+      properties:
+        maps:
+          type: array
+          items:
+            $ref: "#/components/schemas/Mindmap"
+
+    MindmapNode:
+      type: object
+      required: [id, parentId, text, order, collapsed]
+      properties:
+        id:
+          type: string
+          description: Client-generated UUID
+        parentId:
+          type: ["string", "null"]
+          description: Null for the root node
+        text:
+          type: string
+        order:
+          type: number
+          description: Sort position among siblings
+        collapsed:
+          type: boolean
+
+    MindmapWithNodes:
+      type: object
+      required: [map, nodes]
+      properties:
+        map:
+          $ref: "#/components/schemas/Mindmap"
+        nodes:
+          type: array
+          items:
+            $ref: "#/components/schemas/MindmapNode"
+
+    MindmapNodesSnapshot:
+      type: object
+      required: [nodes]
+      properties:
+        baseRevision:
+          type: integer
+          description: Revision the client last saw; if older than server revision, server responds 409 with current data
+        force:
+          type: boolean
+          description: When true, overwrite regardless of baseRevision
+        nodes:
+          type: array
+          items:
+            $ref: "#/components/schemas/MindmapNode"
+
     HealthStatus:
       type: object
       properties:

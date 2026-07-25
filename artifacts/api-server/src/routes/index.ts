@@ -5,6 +5,7 @@ import trainingRouter from "./training";
 import settingsRouter from "./settings";
 import statsRouter from "./stats";
 import tagsRouter from "./tags";
+import mindmapsRouter from "./mindmaps";
 
 const router: IRouter = Router();
 
@@ -14,5 +15,6 @@ router.use(trainingRouter);
 router.use(settingsRouter);
 router.use(statsRouter);
 router.use(tagsRouter);
+router.use(mindmapsRouter);
 
 export default router;

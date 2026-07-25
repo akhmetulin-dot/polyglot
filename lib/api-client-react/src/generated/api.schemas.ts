@@ -5,6 +5,61 @@
  * Vocabulary learning app API with spaced repetition
  * OpenAPI spec version: 0.1.0
  */
+export interface Mindmap {
+  /** Client-generated UUID */
+  id: string;
+  title: string;
+  /** Server revision counter, incremented on every nodes snapshot accepted */
+  revision: number;
+  /** Number of nodes in this map */
+  nodeCount?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MindmapInput {
+  /** Client-generated UUID */
+  id: string;
+  /** @minLength 1 */
+  title: string;
+}
+
+export interface MindmapUpdate {
+  /** @minLength 1 */
+  title?: string;
+}
+
+export interface MindmapListResponse {
+  maps: Mindmap[];
+}
+
+export interface MindmapNode {
+  /** Client-generated UUID */
+  id: string;
+  /**
+     * Null for the root node
+     * @nullable
+     */
+  parentId: string | null;
+  text: string;
+  /** Sort position among siblings */
+  order: number;
+  collapsed: boolean;
+}
+
+export interface MindmapWithNodes {
+  map: Mindmap;
+  nodes: MindmapNode[];
+}
+
+export interface MindmapNodesSnapshot {
+  /** Revision the client last saw; if older than server revision, server responds 409 with current data */
+  baseRevision?: number;
+  /** When true, overwrite regardless of baseRevision */
+  force?: boolean;
+  nodes: MindmapNode[];
+}
+
 export interface HealthStatus {
   status: string;
 }

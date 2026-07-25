@@ -32,6 +32,12 @@ import type {
   HintResult,
   ListTagsParams,
   ListWordsParams,
+  Mindmap,
+  MindmapInput,
+  MindmapListResponse,
+  MindmapNodesSnapshot,
+  MindmapUpdate,
+  MindmapWithNodes,
   ReviewSession,
   SessionComplete,
   Settings,
@@ -76,6 +82,446 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getListMindmapsUrl = () => {
+
+
+
+
+  return `/api/mindmaps`
+}
+
+/**
+ * @summary List all mind maps with metadata
+ */
+export const listMindmaps = async ( options?: RequestInit): Promise<MindmapListResponse> => {
+
+  return customFetch<MindmapListResponse>(getListMindmapsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListMindmapsQueryKey = () => {
+    return [
+    `/api/mindmaps`
+    ] as const;
+    }
+
+
+export const getListMindmapsQueryOptions = <TData = Awaited<ReturnType<typeof listMindmaps>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMindmaps>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMindmapsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMindmaps>>> = ({ signal }) => listMindmaps({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMindmaps>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListMindmapsQueryResult = NonNullable<Awaited<ReturnType<typeof listMindmaps>>>
+export type ListMindmapsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List all mind maps with metadata
+ */
+
+export function useListMindmaps<TData = Awaited<ReturnType<typeof listMindmaps>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMindmaps>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListMindmapsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateMindmapUrl = () => {
+
+
+
+
+  return `/api/mindmaps`
+}
+
+/**
+ * @summary Create a new mind map
+ */
+export const createMindmap = async (mindmapInput: MindmapInput, options?: RequestInit): Promise<Mindmap> => {
+
+  return customFetch<Mindmap>(getCreateMindmapUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(mindmapInput)
+  }
+);}
+
+
+
+
+
+export const getCreateMindmapMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMindmap>>, TError,{data: BodyType<MindmapInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createMindmap>>, TError,{data: BodyType<MindmapInput>}, TContext> => {
+
+const mutationKey = ['createMindmap'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createMindmap>>, {data: BodyType<MindmapInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createMindmap(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateMindmapMutationResult = NonNullable<Awaited<ReturnType<typeof createMindmap>>>
+    export type CreateMindmapMutationBody = BodyType<MindmapInput>
+    export type CreateMindmapMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Create a new mind map
+ */
+export const useCreateMindmap = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMindmap>>, TError,{data: BodyType<MindmapInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createMindmap>>,
+        TError,
+        {data: BodyType<MindmapInput>},
+        TContext
+      > => {
+      return useMutation(getCreateMindmapMutationOptions(options));
+    }
+
+export const getGetMindmapUrl = (id: string,) => {
+
+
+
+
+  return `/api/mindmaps/${id}`
+}
+
+/**
+ * @summary Get a mind map with all its nodes
+ */
+export const getMindmap = async (id: string, options?: RequestInit): Promise<MindmapWithNodes> => {
+
+  return customFetch<MindmapWithNodes>(getGetMindmapUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMindmapQueryKey = (id: string,) => {
+    return [
+    `/api/mindmaps/${id}`
+    ] as const;
+    }
+
+
+export const getGetMindmapQueryOptions = <TData = Awaited<ReturnType<typeof getMindmap>>, TError = ErrorType<ErrorResponse>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMindmap>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMindmapQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMindmap>>> = ({ signal }) => getMindmap(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMindmap>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMindmapQueryResult = NonNullable<Awaited<ReturnType<typeof getMindmap>>>
+export type GetMindmapQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Get a mind map with all its nodes
+ */
+
+export function useGetMindmap<TData = Awaited<ReturnType<typeof getMindmap>>, TError = ErrorType<ErrorResponse>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMindmap>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMindmapQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateMindmapUrl = (id: string,) => {
+
+
+
+
+  return `/api/mindmaps/${id}`
+}
+
+/**
+ * @summary Rename a mind map
+ */
+export const updateMindmap = async (id: string,
+    mindmapUpdate: MindmapUpdate, options?: RequestInit): Promise<Mindmap> => {
+
+  return customFetch<Mindmap>(getUpdateMindmapUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(mindmapUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateMindmapMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMindmap>>, TError,{id: string;data: BodyType<MindmapUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateMindmap>>, TError,{id: string;data: BodyType<MindmapUpdate>}, TContext> => {
+
+const mutationKey = ['updateMindmap'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateMindmap>>, {id: string;data: BodyType<MindmapUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateMindmap(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateMindmapMutationResult = NonNullable<Awaited<ReturnType<typeof updateMindmap>>>
+    export type UpdateMindmapMutationBody = BodyType<MindmapUpdate>
+    export type UpdateMindmapMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Rename a mind map
+ */
+export const useUpdateMindmap = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMindmap>>, TError,{id: string;data: BodyType<MindmapUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateMindmap>>,
+        TError,
+        {id: string;data: BodyType<MindmapUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateMindmapMutationOptions(options));
+    }
+
+export const getDeleteMindmapUrl = (id: string,) => {
+
+
+
+
+  return `/api/mindmaps/${id}`
+}
+
+/**
+ * @summary Delete a mind map with all nodes
+ */
+export const deleteMindmap = async (id: string, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteMindmapUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteMindmapMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteMindmap>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteMindmap>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['deleteMindmap'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteMindmap>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteMindmap(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteMindmapMutationResult = NonNullable<Awaited<ReturnType<typeof deleteMindmap>>>
+
+    export type DeleteMindmapMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Delete a mind map with all nodes
+ */
+export const useDeleteMindmap = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteMindmap>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteMindmap>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getDeleteMindmapMutationOptions(options));
+    }
+
+export const getSyncMindmapNodesUrl = (id: string,) => {
+
+
+
+
+  return `/api/mindmaps/${id}/nodes`
+}
+
+/**
+ * @summary Replace all nodes of a map with a client snapshot (offline sync)
+ */
+export const syncMindmapNodes = async (id: string,
+    mindmapNodesSnapshot: MindmapNodesSnapshot, options?: RequestInit): Promise<Mindmap> => {
+
+  return customFetch<Mindmap>(getSyncMindmapNodesUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(mindmapNodesSnapshot)
+  }
+);}
+
+
+
+
+
+export const getSyncMindmapNodesMutationOptions = <TError = ErrorType<ErrorResponse | MindmapWithNodes>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof syncMindmapNodes>>, TError,{id: string;data: BodyType<MindmapNodesSnapshot>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof syncMindmapNodes>>, TError,{id: string;data: BodyType<MindmapNodesSnapshot>}, TContext> => {
+
+const mutationKey = ['syncMindmapNodes'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof syncMindmapNodes>>, {id: string;data: BodyType<MindmapNodesSnapshot>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  syncMindmapNodes(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SyncMindmapNodesMutationResult = NonNullable<Awaited<ReturnType<typeof syncMindmapNodes>>>
+    export type SyncMindmapNodesMutationBody = BodyType<MindmapNodesSnapshot>
+    export type SyncMindmapNodesMutationError = ErrorType<ErrorResponse | MindmapWithNodes>
+
+    /**
+ * @summary Replace all nodes of a map with a client snapshot (offline sync)
+ */
+export const useSyncMindmapNodes = <TError = ErrorType<ErrorResponse | MindmapWithNodes>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof syncMindmapNodes>>, TError,{id: string;data: BodyType<MindmapNodesSnapshot>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof syncMindmapNodes>>,
+        TError,
+        {id: string;data: BodyType<MindmapNodesSnapshot>},
+        TContext
+      > => {
+      return useMutation(getSyncMindmapNodesMutationOptions(options));
+    }
 
 export const getHealthCheckUrl = () => {
 

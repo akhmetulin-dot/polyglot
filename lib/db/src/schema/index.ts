@@ -2,3 +2,4 @@ export * from "./words";
 export * from "./settings";
 export * from "./wordEvents";
 export * from "./customTags";
+export * from "./mindmaps";

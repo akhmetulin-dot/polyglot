@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/mindmap-app/"
+title = "Карта жизни — Майнд-мап"
+version = "1.0.0"
+id = "artifacts/mindmap-app"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/mindmap-app/" ]
+localPort = 20333
+
+[services.development]
+run = "pnpm --filter @workspace/mindmap-app run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/mindmap-app", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/mindmap-app/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "20333"
+BASE_PATH = "/mindmap-app/"

@@ -8,6 +8,13 @@
       "when": 1784851403253,
       "tag": "0000_boring_puppet_master",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1784945845132,
+      "tag": "0001_productive_expediter",
+      "breakpoints": true
     }
   ]
 }
