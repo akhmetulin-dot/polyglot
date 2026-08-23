@@ -1,0 +1,9 @@
+packages:
+  - apps/*
+  - packages/*
+
+autoInstallPeers: false
+
+onlyBuiltDependencies:
+  - esbuild
+  - unrs-resolver

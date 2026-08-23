@@ -1,0 +1,17 @@
+# Two independent projects live in this repository:
+#
+#   polyglot/  — Полиглот, the vocabulary trainer
+#   mindmap/   — Карта жизни, the mind map PWA
+#
+# A Netlify site builds exactly one of them. This file points the default site
+# at polyglot/; the build settings themselves live in polyglot/netlify.toml,
+# which Netlify loads from the base directory.
+#
+# To deploy the mind map, create a second Netlify site from this same
+# repository and set its base directory to "mindmap".
+#
+# Once each folder is split into its own GitHub repository, delete this file —
+# the netlify.toml inside each project then works unchanged at its repo root.
+
+[build]
+  base = "polyglot"

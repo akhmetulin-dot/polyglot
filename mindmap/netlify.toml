@@ -1,0 +1,24 @@
+# Netlify site config for this project.
+# When both projects live in one repository, set the site's
+# "Base directory" to this folder so these settings are picked up.
+
+[build]
+  command = "pnpm run build"
+  publish = "apps/web/dist"
+  functions = "netlify/functions"
+
+[dev]
+  command = "pnpm --filter @mindmap/web run dev"
+  targetPort = 5173
+  framework = "#custom"
+
+[build.environment]
+  NODE_VERSION = "22"
+  NPM_FLAGS = "--version"
+
+# /api/* is handled by the serverless function (see netlify/functions/api.mts).
+# Everything else is a single-page app, so unknown paths serve index.html.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
