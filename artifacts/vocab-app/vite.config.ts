@@ -45,9 +45,9 @@ export default defineConfig({
   },
   root: path.resolve(import.meta.dirname),
   build: {
-    // Output to the monorepo root dist/ so Vercel finds it at the default location.
-    // In Replit we only run `vite dev`, not `vite build`, so this path is fine.
-    outDir: path.resolve(import.meta.dirname, '..', '..', 'dist'),
+    // Keep the build output within this app so Vercel can publish it from the
+    // configured Root Directory (`artifacts/vocab-app`).
+    outDir: path.resolve(import.meta.dirname, 'dist'),
     emptyOutDir: true,
   },
   server: {
