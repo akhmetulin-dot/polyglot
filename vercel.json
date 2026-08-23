@@ -1,6 +1,6 @@
 {
   "buildCommand": "pnpm --filter @workspace/vocab-app run build",
-  "outputDirectory": "dist",
+  "outputDirectory": "artifacts/vocab-app/dist",
   "installCommand": "pnpm install",
   "rewrites": [
     {
