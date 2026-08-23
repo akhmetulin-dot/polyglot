@@ -1,11 +1,11 @@
 import { Router, type IRouter } from "express";
-import healthRouter from "./health";
-import wordsRouter from "./words";
-import trainingRouter from "./training";
-import settingsRouter from "./settings";
-import statsRouter from "./stats";
-import tagsRouter from "./tags";
-import mindmapsRouter from "./mindmaps";
+import healthRouter from "./health.js";
+import wordsRouter from "./words.js";
+import trainingRouter from "./training.js";
+import settingsRouter from "./settings.js";
+import statsRouter from "./stats.js";
+import tagsRouter from "./tags.js";
+import mindmapsRouter from "./mindmaps.js";
 
 const router: IRouter = Router();
 
