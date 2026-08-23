@@ -1,4 +1,0 @@
-- [Vocab app architecture](vocab-app-arch.md) — session-based SRS, word events table, soft delete; key schema decisions
-- [Vocab app improvements Jul 2026](vocab-improvements-jul2026.md) — dark mode, category pills in Прописи, correct-answer reveal in trainer, word type filter, API limit/total fixes, query invalidation, empty states
-- [Vocab app priority & grouping](vocab-priority-grouping.md) — priority col on words, wordGroup col, traceSessionSize in settings; clean() single-word trimming; mark-familiar endpoint
-- [Mindmap app architecture](mindmap-arch.md) — IndexedDB-first sync, bottom toolbar (Фокус style), SVG+HTML hybrid canvas, state mutation via nodesRef

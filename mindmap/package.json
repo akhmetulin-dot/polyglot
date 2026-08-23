@@ -1,0 +1,27 @@
+{
+  "name": "mindmap",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Карта жизни — offline-first mind map PWA",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "dev": "pnpm --filter @mindmap/web run dev",
+    "dev:api": "pnpm --filter @mindmap/api run dev",
+    "build": "pnpm run typecheck && pnpm --filter @mindmap/api run build && pnpm --filter @mindmap/web run build",
+    "typecheck": "tsc --build && pnpm -r --if-present run typecheck && tsc -p netlify/functions/tsconfig.json",
+    "codegen": "pnpm --filter @mindmap/api-spec run codegen",
+    "db:generate": "pnpm --filter @mindmap/db run generate",
+    "db:migrate": "pnpm --filter @mindmap/db run migrate",
+    "db:push": "pnpm --filter @mindmap/db run push"
+  },
+  "dependencies": {
+    "@mindmap/api": "workspace:*"
+  },
+  "devDependencies": {
+    "@netlify/functions": "^6.0.0",
+    "@types/node": "^25.3.3",
+    "prettier": "^3.9.5",
+    "typescript": "~5.9.3"
+  }
+}

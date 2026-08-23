@@ -1,0 +1,27 @@
+{
+  "name": "polyglot",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Полиглот — vocabulary trainer with session-based spaced repetition",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "dev": "pnpm --filter @polyglot/web run dev",
+    "dev:api": "pnpm --filter @polyglot/api run dev",
+    "build": "pnpm run typecheck && pnpm --filter @polyglot/api run build && pnpm --filter @polyglot/web run build",
+    "typecheck": "tsc --build && pnpm -r --if-present run typecheck && tsc -p netlify/functions/tsconfig.json",
+    "codegen": "pnpm --filter @polyglot/api-spec run codegen",
+    "db:generate": "pnpm --filter @polyglot/db run generate",
+    "db:migrate": "pnpm --filter @polyglot/db run migrate",
+    "db:push": "pnpm --filter @polyglot/db run push"
+  },
+  "dependencies": {
+    "@polyglot/api": "workspace:*"
+  },
+  "devDependencies": {
+    "@netlify/functions": "^6.0.0",
+    "@types/node": "^25.3.3",
+    "prettier": "^3.9.5",
+    "typescript": "~5.9.3"
+  }
+}

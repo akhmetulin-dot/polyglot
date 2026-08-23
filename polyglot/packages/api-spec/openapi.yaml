@@ -1,0 +1,989 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: Полиглот — vocabulary trainer API with session-based spaced repetition
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: words
+    description: Vocabulary word management
+  - name: training
+    description: Training session operations
+  - name: review
+    description: Spaced repetition review operations
+  - name: settings
+    description: App settings
+  - name: stats
+    description: Learning statistics
+  - name: tags
+    description: Custom tag lists (word types, mnemonic groups, semantic groups)
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /words:
+    get:
+      operationId: listWords
+      tags: [words]
+      summary: List all words
+      parameters:
+        - in: query
+          name: search
+          schema:
+            type: string
+          description: Search in Russian, Polish, German, English fields
+        - in: query
+          name: sortBy
+          schema:
+            type: string
+            enum: [frequency, createdAt, russian]
+          description: Sort field
+        - in: query
+          name: limit
+          schema:
+            type: integer
+          description: Page size
+        - in: query
+          name: offset
+          schema:
+            type: integer
+          description: Page offset
+      responses:
+        "200":
+          description: List of words
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WordListResponse"
+    post:
+      operationId: createWord
+      tags: [words]
+      summary: Create a new word
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WordInput"
+      responses:
+        "201":
+          description: Created word
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Word"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /words/{id}:
+    get:
+      operationId: getWord
+      tags: [words]
+      summary: Get a word by ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Word
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Word"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateWord
+      tags: [words]
+      summary: Update a word
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WordUpdate"
+      responses:
+        "200":
+          description: Updated word
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Word"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteWord
+      tags: [words]
+      summary: Delete a word
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /words/trash:
+    get:
+      operationId: listTrashedWords
+      tags: [words]
+      summary: List soft-deleted words
+      responses:
+        "200":
+          description: Trashed words
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WordListResponse"
+
+  /words/export:
+    get:
+      operationId: exportWords
+      tags: [words]
+      summary: Export all active words with their history
+      responses:
+        "200":
+          description: Full word export
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WordExport"
+
+  /words/{id}/mark-familiar:
+    post:
+      operationId: markWordFamiliar
+      tags: [words]
+      summary: Mark word as already partially known — skip Прописи and enter SRS directly
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Word added to SRS queue
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Word"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /words/{id}/restore:
+    post:
+      operationId: restoreWord
+      tags: [words]
+      summary: Restore a soft-deleted word from trash
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Restored word
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Word"
+        "404":
+          description: Not found
+
+  /words/{id}/history:
+    get:
+      operationId: getWordHistory
+      tags: [words]
+      summary: Get training/review event history for a word
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Word event history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WordHistoryResponse"
+
+  /words/bulk-import:
+    post:
+      operationId: bulkImportWords
+      tags: [words]
+      summary: Import multiple words at once
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkImportInput"
+      responses:
+        "200":
+          description: Import result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BulkImportResult"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /training/session:
+    get:
+      operationId: getTrainingSession
+      tags: [training]
+      summary: Get words for a training session
+      description: Returns words due for training (new + words that need repetition due to errors)
+      parameters:
+        - in: query
+          name: count
+          schema:
+            type: integer
+          description: Number of words in session (default 20)
+      responses:
+        "200":
+          description: Training session words
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrainingSession"
+
+  /training/answer:
+    post:
+      operationId: submitAnswer
+      tags: [training]
+      summary: Submit answer for a word during training
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnswerInput"
+      responses:
+        "200":
+          description: Answer result with feedback
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnswerResult"
+
+  /training/complete:
+    post:
+      operationId: completeSession
+      tags: [training]
+      summary: Mark current training or review session as complete
+      description: Increments the global session counter used by session-based spaced repetition.
+      responses:
+        "200":
+          description: Updated session counter
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionComplete"
+
+  /training/hint:
+    post:
+      operationId: requestHint
+      tags: [training]
+      summary: Request a hint for a word during training
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HintInput"
+      responses:
+        "200":
+          description: Hint recorded and returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HintResult"
+
+  /review/due:
+    get:
+      operationId: getDueReviews
+      tags: [review]
+      summary: Get words due for spaced repetition review
+      parameters:
+        - in: query
+          name: count
+          schema:
+            type: integer
+          description: Max number of words to return
+      responses:
+        "200":
+          description: Words due for review
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewSession"
+
+  /settings:
+    get:
+      operationId: getSettings
+      tags: [settings]
+      summary: Get app settings
+      responses:
+        "200":
+          description: Current settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Settings"
+    put:
+      operationId: updateSettings
+      tags: [settings]
+      summary: Update app settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SettingsInput"
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Settings"
+
+  /stats:
+    get:
+      operationId: getStats
+      tags: [stats]
+      summary: Get overall learning statistics
+      responses:
+        "200":
+          description: Learning statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Stats"
+
+  /words/{id}/trace:
+    post:
+      operationId: recordWordTrace
+      tags: [words]
+      summary: Increment trace count for a word
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated word
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Word"
+        "404":
+          description: Word not found
+
+  /tags:
+    get:
+      operationId: listTags
+      tags: [tags]
+      summary: List all custom tags optionally filtered by kind
+      parameters:
+        - in: query
+          name: kind
+          schema:
+            type: string
+          description: "mnemonic_group | semantic_group | word_type"
+      responses:
+        "200":
+          description: List of tags
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TagListResponse"
+    post:
+      operationId: createTag
+      tags: [tags]
+      summary: Create a new custom tag
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TagInput"
+      responses:
+        "201":
+          description: Created tag
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tag"
+
+  /tags/{id}:
+    put:
+      operationId: updateTag
+      tags: [tags]
+      summary: Update a tag label or sort order
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TagUpdate"
+      responses:
+        "200":
+          description: Updated tag
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tag"
+        "404":
+          description: Tag not found
+    delete:
+      operationId: deleteTag
+      tags: [tags]
+      summary: Delete a custom tag
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Tag not found
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    Word:
+      type: object
+      required: [id, russian, createdAt]
+      properties:
+        id:
+          type: integer
+        russian:
+          type: string
+        polish:
+          type: ["string", "null"]
+        german:
+          type: ["string", "null"]
+        english:
+          type: ["string", "null"]
+        mnemonic:
+          type: ["string", "null"]
+        frequencyRank:
+          type: ["integer", "null"]
+          description: Frequency rank in academic dictionary (lower = more frequent)
+        correctCount:
+          type: integer
+          description: Total correct answers across all languages
+        hintCount:
+          type: integer
+          description: Total hints requested
+        nextReviewAt:
+          type: ["string", "null"]
+          format: date-time
+          description: Marker - null means new word, non-null means in SRS queue
+        nextReviewSession:
+          type: ["integer", "null"]
+          description: Global session number when this word is next due for review
+        reviewInterval:
+          type: integer
+          description: Number of times reviewed correctly (index into intervals array)
+        wordType:
+          type: ["string", "null"]
+          description: Usage context of the word (any custom tag value)
+        wordGroup:
+          type: ["string", "null"]
+          description: Mnemonic group label — words sharing the same memory technique/image
+        semanticGroup:
+          type: ["string", "null"]
+          description: Semantic group label — synonyms / words interchangeable in context
+        priority:
+          type: integer
+          description: Priority for Прописи ordering (0 = normal, 1 = high — words that were answered wrong)
+          default: 0
+        consecutiveCorrect:
+          type: integer
+          description: Consecutive correct SRS answers — resets to 0 on wrong answer
+          default: 0
+        traceCount:
+          type: integer
+          description: How many times this word has been completed in Прописи (trace) sessions
+          default: 0
+        graduatedAt:
+          type: ["string", "null"]
+          format: date-time
+          description: When set — word is fully learned and removed from active review rotation
+        deletedAt:
+          type: ["string", "null"]
+          format: date-time
+          description: Soft-delete timestamp; null means active, non-null means in trash
+        createdAt:
+          type: string
+          format: date-time
+
+    WordInput:
+      type: object
+      required: [russian]
+      properties:
+        russian:
+          type: string
+          minLength: 1
+        polish:
+          type: string
+        german:
+          type: string
+        english:
+          type: string
+        mnemonic:
+          type: string
+        frequencyRank:
+          type: integer
+        wordType:
+          type: string
+          description: Word type value (any custom tag value)
+        wordGroup:
+          type: string
+          description: Mnemonic group label
+        semanticGroup:
+          type: string
+          description: Semantic group label (synonyms / interchangeable words)
+
+    WordUpdate:
+      type: object
+      properties:
+        russian:
+          type: string
+          minLength: 1
+        polish:
+          type: string
+        german:
+          type: string
+        english:
+          type: string
+        mnemonic:
+          type: string
+        frequencyRank:
+          type: integer
+        wordType:
+          type: string
+          description: Word type value (any custom tag value)
+        wordGroup:
+          type: string
+          description: Mnemonic group label
+        semanticGroup:
+          type: string
+          description: Semantic group label (synonyms / interchangeable words)
+
+    WordListResponse:
+      type: object
+      required: [words, total]
+      properties:
+        words:
+          type: array
+          items:
+            $ref: "#/components/schemas/Word"
+        total:
+          type: integer
+
+    BulkImportInput:
+      type: object
+      required: [words]
+      properties:
+        words:
+          type: array
+          items:
+            $ref: "#/components/schemas/WordInput"
+
+    BulkImportResult:
+      type: object
+      required: [imported, skipped, errors]
+      properties:
+        imported:
+          type: integer
+        skipped:
+          type: integer
+        errors:
+          type: array
+          items:
+            type: string
+
+    TrainingWord:
+      type: object
+      required: [wordId, russian, correctCount, hintCount]
+      properties:
+        wordId:
+          type: integer
+        russian:
+          type: string
+        mnemonic:
+          type: ["string", "null"]
+        frequencyRank:
+          type: ["integer", "null"]
+        correctCount:
+          type: integer
+        hintCount:
+          type: integer
+
+    TrainingSession:
+      type: object
+      required: [words, sessionId]
+      properties:
+        sessionId:
+          type: string
+        words:
+          type: array
+          items:
+            $ref: "#/components/schemas/TrainingWord"
+
+    AnswerInput:
+      type: object
+      required: [wordId, polish, german, english]
+      properties:
+        wordId:
+          type: integer
+        polish:
+          type: string
+        german:
+          type: string
+        english:
+          type: string
+
+    AnswerResult:
+      type: object
+      required: [wordId, polishCorrect, germanCorrect, englishCorrect, allCorrect, word]
+      properties:
+        wordId:
+          type: integer
+        polishCorrect:
+          type: boolean
+        germanCorrect:
+          type: boolean
+        englishCorrect:
+          type: boolean
+        allCorrect:
+          type: boolean
+        word:
+          $ref: "#/components/schemas/Word"
+
+    HintInput:
+      type: object
+      required: [wordId]
+      properties:
+        wordId:
+          type: integer
+
+    HintResult:
+      type: object
+      required: [wordId, mnemonic, polish, german, english, hintCount]
+      properties:
+        wordId:
+          type: integer
+        mnemonic:
+          type: ["string", "null"]
+        polish:
+          type: ["string", "null"]
+        german:
+          type: ["string", "null"]
+        english:
+          type: ["string", "null"]
+        hintCount:
+          type: integer
+
+    ReviewSession:
+      type: object
+      required: [words, total]
+      properties:
+        words:
+          type: array
+          items:
+            $ref: "#/components/schemas/TrainingWord"
+        total:
+          type: integer
+
+    SessionComplete:
+      type: object
+      required: [totalSessions]
+      properties:
+        totalSessions:
+          type: integer
+          description: New global session count after increment
+
+    Settings:
+      type: object
+      required: [id, errorRepeatAfter, reviewIntervals, sessionSize, reviewSessionSize, totalSessions, traceSessionSize, traceNew, traceReview, traceError, traceErrorReview, graduationThreshold, appName]
+      properties:
+        id:
+          type: integer
+        errorRepeatAfter:
+          type: integer
+          description: Repeat wrong word after N words in session
+        reviewIntervals:
+          type: array
+          items:
+            type: integer
+          description: Spaced repetition intervals in sessions [3, 5, 9, 13]
+        sessionSize:
+          type: integer
+          description: Default training session word count
+        reviewSessionSize:
+          type: integer
+          description: Default review session word count
+        totalSessions:
+          type: integer
+          description: Total completed sessions (global counter for session-based SRS)
+        traceSessionSize:
+          type: integer
+          description: Number of words per Прописи session
+        traceNew:
+          type: integer
+          description: Number of trace repetitions for new words
+        traceReview:
+          type: integer
+          description: Number of trace repetitions for review words
+        traceError:
+          type: integer
+          description: Number of trace repetitions for error words
+        traceErrorReview:
+          type: integer
+          description: Number of trace repetitions for error-review words
+        graduationThreshold:
+          type: integer
+          description: Consecutive correct SRS answers required to graduate a word (fully learned)
+        appName:
+          type: string
+          description: Custom app name shown in the header and PWA manifest
+
+    SettingsInput:
+      type: object
+      properties:
+        errorRepeatAfter:
+          type: integer
+          minimum: 1
+          maximum: 20
+        reviewIntervals:
+          type: array
+          items:
+            type: integer
+        sessionSize:
+          type: integer
+          minimum: 1
+          maximum: 100
+        reviewSessionSize:
+          type: integer
+          minimum: 1
+          maximum: 100
+        traceSessionSize:
+          type: integer
+          minimum: 1
+          maximum: 100
+        traceNew:
+          type: integer
+          minimum: 1
+          maximum: 20
+        traceReview:
+          type: integer
+          minimum: 1
+          maximum: 20
+        traceError:
+          type: integer
+          minimum: 1
+          maximum: 20
+        traceErrorReview:
+          type: integer
+          minimum: 1
+          maximum: 20
+        graduationThreshold:
+          type: integer
+          minimum: 3
+          maximum: 30
+        appName:
+          type: string
+          minLength: 1
+          maxLength: 40
+
+    Tag:
+      type: object
+      required: [id, kind, value, label, sortOrder]
+      properties:
+        id:
+          type: integer
+        kind:
+          type: string
+        value:
+          type: string
+        label:
+          type: string
+        sortOrder:
+          type: integer
+
+    TagListResponse:
+      type: object
+      required: [tags]
+      properties:
+        tags:
+          type: array
+          items:
+            $ref: "#/components/schemas/Tag"
+
+    TagInput:
+      type: object
+      required: [kind, value, label]
+      properties:
+        kind:
+          type: string
+        value:
+          type: string
+        label:
+          type: string
+        sortOrder:
+          type: integer
+
+    TagUpdate:
+      type: object
+      properties:
+        label:
+          type: string
+        sortOrder:
+          type: integer
+
+    WordHistoryEvent:
+      type: object
+      required: [id, eventType, sessionNumber, createdAt]
+      properties:
+        id:
+          type: integer
+        eventType:
+          type: string
+          description: "correct | wrong | hint | review_correct | review_wrong"
+        sessionNumber:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    WordHistoryResponse:
+      type: object
+      required: [wordId, events]
+      properties:
+        wordId:
+          type: integer
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/WordHistoryEvent"
+
+    WordExport:
+      type: object
+      required: [exportedAt, words]
+      properties:
+        exportedAt:
+          type: string
+          format: date-time
+        words:
+          type: array
+          items:
+            $ref: "#/components/schemas/Word"
+
+    Stats:
+      type: object
+      required: [totalWords, masteredWords, dueForReview, totalCorrect, totalHints, accuracyPercent, wordsLearnedToday]
+      properties:
+        totalWords:
+          type: integer
+        masteredWords:
+          type: integer
+          description: Words with review interval >= 30 days
+        dueForReview:
+          type: integer
+        totalCorrect:
+          type: integer
+        totalHints:
+          type: integer
+        accuracyPercent:
+          type: number
+          description: Percentage of correct answers without hints
+        wordsLearnedToday:
+          type: integer
