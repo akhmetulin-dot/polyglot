@@ -12,5 +12,12 @@
     {
       "path": "./lib/api-zod"
     }
+  ],
+  "compilerOptions": {
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true
+  },
+  "include": [
+    "api/**/*.ts"
   ]
 }
